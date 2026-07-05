@@ -1,0 +1,10 @@
+{
+  "pwm_freq_hz": 100,
+  "max_duty_cap_pct": 100,
+  "channels": {
+    "stop": { "gpio": 4, "gamma": 2.00, "min_duty": 50, "max_duty": 1023, "soft_start_ms": 30 },
+    "reverse": { "gpio": 5, "gamma": 2.00, "min_duty": 50, "max_duty": 1023, "soft_start_ms": 30 },
+    "turn": { "gpio": 15, "gamma": 2.00, "min_duty": 50, "max_duty": 1023, "soft_start_ms": 30 },
+    "marker": { "gpio": 13, "gamma": 2.20, "min_duty": 100, "max_duty": 1023, "soft_start_ms": 30 }
+  }
+}
