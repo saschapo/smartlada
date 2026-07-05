@@ -9,7 +9,9 @@ namespace config {
 const ChannelDef CHANNEL_DEFS[channels::NUM_CHANNELS] = {
     {"stop", "Стоп", 21, 4, 300},
     {"reverse", "Задний ход", 21, 5, 300},
-    {"turn", "Поворот", 21, 12, 300},
+    // GPIO15: не 12/14 (I2C OLED платы HW-364A); pulldown платы держит канал
+    // закрытым при boot. Ничто внешнее не должно тянуть GPIO15 вверх при старте!
+    {"turn", "Поворот", 21, 15, 300},
     {"marker", "Габарит", 5, 13, 200},
 };
 

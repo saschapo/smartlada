@@ -8,6 +8,7 @@
 
 #include "src/channels/channels.h"
 #include "src/config/config.h"
+#include "src/display/display.h"
 #include "src/platform_pwm/platform_pwm.h"
 #include "src/web/web_server.h"
 
@@ -51,6 +52,11 @@ void setup() {
 
   web::begin(&cfg, chans, applyGlobals);
   Serial.println(F("HTTP :80 ready"));
+
+  if (display::begin(&cfg, chans))
+    Serial.println(F("OLED ready (FLASH button switches pages)"));
+  else
+    Serial.println(F("OLED not found, continuing without display"));
 }
 
 void loop() {
@@ -63,4 +69,5 @@ void loop() {
       lastDuty[i] = d;
     }
   }
+  display::tick(now);
 }

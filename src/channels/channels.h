@@ -34,6 +34,9 @@ class Channel {
   // Текущий duty с учётом soft-start ramp; вызывать периодически из loop().
   uint16_t update(uint32_t now_ms);
 
+  // Последний вычисленный duty (без побочных эффектов, для индикации).
+  uint16_t currentDuty() const { return current_; }
+
  private:
   uint16_t computeTarget() const;
   void retarget(uint32_t now_ms);
