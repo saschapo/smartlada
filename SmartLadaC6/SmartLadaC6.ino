@@ -1,10 +1,10 @@
-// SmartLada C6 — bring-up стенд PWM на ESP32-C6 (аппаратный LEDC, low-side D4184).
-// Порт стенда ESP8266: слои channels/ и config/ перенесены без изменений,
-// platform_pwm/ переписан на LEDC, display/ (OLED) заменён на status/ (NeoPixel),
-// web/ — тот же UI на ядре arduino-esp32. Схема/пины/предупреждения — README.md.
+// SmartLada C6 — PWM bring-up bench on ESP32-C6 (hardware LEDC, low-side D4184).
+// Port of the ESP8266 bench: channels/ and config/ layers moved unchanged,
+// platform_pwm/ rewritten on LEDC, display/ (OLED) replaced by status/ (NeoPixel),
+// web/ — same UI on the arduino-esp32 core. Wiring/pins/warnings — README.md.
 //
-// [КРИТИЧНО при подключённых лампах] Общая земля C6 <-> БП 12 В. Предохранитель
-// T6.3–8 А. Пины каналов boot-safe (GPIO0..3), но затворный pulldown D4184 обязателен.
+// [CRITICAL with lamps connected] Common ground C6 <-> 12 V PSU. Fuse T6.3–8 A.
+// Channel pins are boot-safe (GPIO0..3), but the D4184 gate pulldown is mandatory.
 
 #include <WiFi.h>
 
@@ -31,7 +31,7 @@ static void applyGlobals() {
 }
 
 void setup() {
-  // FORCE-SAFE: все 4 канала в 0 до любой другой инициализации
+  // FORCE-SAFE: drive all 4 channels to 0 before any other init
   config::setDefaults(cfg);
   for (uint8_t i = 0; i < channels::NUM_CHANNELS; i++) chanPins[i] = cfg.gpio[i];
   platform_pwm::forceAllLow(chanPins, channels::NUM_CHANNELS);
@@ -45,14 +45,14 @@ void setup() {
   for (uint8_t i = 0; i < channels::NUM_CHANNELS; i++) {
     chans[i].setCalib(cfg.calib, now);
     chans[i].setCapPct(cfg.max_duty_cap_pct, now);
-    lastDuty[i] = 0xFFFF;  // форсировать первую запись
+    lastDuty[i] = 0xFFFF;  // force the first write
   }
 
   WiFi.persistent(false);
   WiFi.mode(WIFI_AP);
   WiFi.softAP(AP_SSID, AP_PASS);
-  WiFi.setSleep(false);  // без модем-power-save: убирает задержку 1-2 с на первый
-                         // запрос после простоя (иначе синхронный WebServer блокирует loop)
+  WiFi.setSleep(false);  // no modem power-save: removes the 1-2 s delay on the first
+                         // request after idle (else the sync WebServer blocks loop)
   Serial.print(F("AP "));
   Serial.print(AP_SSID);
   Serial.print(F(", IP: "));
@@ -71,8 +71,8 @@ void setup() {
 void loop() {
   web::handle();
   const uint32_t now = millis();
-  anim::tick(now);    // в режиме анимации ведёт проценты каналов; в MANUAL молчит
-  button::tick(now);  // кнопка BOOT: смена режима / диммер (может перебить проценты)
+  anim::tick(now);    // in animation mode drives channel percents; silent in MANUAL
+  button::tick(now);  // BOOT button: mode switch / dimmer (may override percents)
   for (uint8_t i = 0; i < channels::NUM_CHANNELS; i++) {
     uint16_t d = chans[i].update(now);
     if (d != lastDuty[i]) {

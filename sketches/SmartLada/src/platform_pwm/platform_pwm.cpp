@@ -6,7 +6,7 @@ namespace platform_pwm {
 
 void forceAllLow(const uint8_t* pins, uint8_t count) {
   for (uint8_t i = 0; i < count; i++) {
-    // LOW в выходной регистр до переключения в OUTPUT — без импульса на затворе
+    // LOW into the output latch before switching to OUTPUT — no glitch on the gate
     digitalWrite(pins[i], LOW);
     pinMode(pins[i], OUTPUT);
     digitalWrite(pins[i], LOW);
@@ -26,7 +26,7 @@ void setFreq(uint16_t freq_hz) {
 void write(uint8_t pin, uint16_t duty) {
   if (duty == 0) {
     analogWrite(pin, 0);
-    digitalWrite(pin, LOW);  // страховка: физический 0 без остаточного PWM
+    digitalWrite(pin, LOW);  // safety: physical 0 with no residual PWM
     return;
   }
   analogWrite(pin, duty > 1023 ? 1023 : duty);

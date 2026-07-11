@@ -3,9 +3,8 @@
 #include "../channels/channels.h"
 #include "../config/config.h"
 
-// web layer: AP + HTTP + UI + export/import (ESP32-C6, arduino-esp32 core).
-// Temporary layer during C6 bring-up: lets us verify 4 channels without a
-// coordinator. Final control will be Zigbee; this layer is replaced then.
+// web layer: AP + HTTP + UI + export/import.
+// [DISCARDED] On ESP32-C6 control goes through Zigbee.
 
 namespace web {
 

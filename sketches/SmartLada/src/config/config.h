@@ -5,31 +5,30 @@
 #include "../channels/channels.h"
 
 // config layer: settings struct + JSON (de)serialization.
-// Pure C++ (snprintf/strtod), no Arduino/ESP8266/Wi-Fi.
+// [PORTABLE to ESP32-C6] Pure C++ (snprintf/strtod), no Arduino/ESP8266/Wi-Fi.
 
 namespace config {
 
-// Channel map. GPIOs are fixed by firmware (boot-safe, see config.cpp/README).
+// Channel map (spec, section 2). GPIOs are tentative — verify against the HW-365A layout.
 struct ChannelDef {
-  const char* key;   // channel key in the UI
+  const char* key;   // section key in JSON and UI
   const char* name;  // human-readable name (UTF-8)
   uint8_t power_w;
   uint8_t default_gpio;
+  uint16_t default_soft_start_ms;
 };
 
 extern const ChannelDef CHANNEL_DEFS[channels::NUM_CHANNELS];
 
-// Lamps are identical (R10W) → calibration is shared across all channels.
+struct ChannelConfig {
+  uint8_t gpio;
+  channels::Calib calib;
+};
+
 struct Config {
-  uint32_t pwm_freq_hz;               // 10..30000
-  uint8_t max_duty_cap_pct;           // 0..100
-  channels::Calib calib;              // shared: gamma / min_duty / max_duty / soft_start
-  uint8_t gpio[channels::NUM_CHANNELS];  // pins (fixed by firmware)
-  // Animation test-mode timings (ms), editable from the web (100..10000):
-  uint16_t chase_ms;   // CHASE — step for switching the active channel
-  uint16_t seq_ms;     // SEQ — fill step
-  uint16_t pulse_ms;   // PULSE — breathing period
-  uint16_t alt_ms;     // ALT — even/odd step
+  uint16_t pwm_freq_hz;      // 100..1000, default 150
+  uint8_t max_duty_cap_pct;  // 0..100, default 60 (force-safe)
+  ChannelConfig ch[channels::NUM_CHANNELS];
 };
 
 void setDefaults(Config& cfg);

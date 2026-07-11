@@ -8,7 +8,7 @@
 
 namespace web {
 
-static_assert(channels::NUM_CHANNELS == 4, "handleStatus рассчитан на 4 канала");
+static_assert(channels::NUM_CHANNELS == 4, "handleStatus assumes 4 channels");
 
 static ESP8266WebServer server(80);
 static config::Config* s_cfg = nullptr;

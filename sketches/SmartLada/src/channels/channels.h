@@ -11,7 +11,7 @@ constexpr uint16_t DUTY_MAX = 1023;  // 10-bit duty scale
 constexpr uint8_t NUM_CHANNELS = 4;
 
 struct Calib {
-  float gamma;             // 1.0..2.5, default 1.9 (range/defaults in config.cpp)
+  float gamma;             // 1.8..2.6, default 2.2
   uint16_t min_duty;       // 0..1023
   uint16_t max_duty;       // 0..1023
   uint16_t soft_start_ms;  // 0..1000
@@ -41,8 +41,7 @@ class Channel {
   uint16_t computeTarget() const;
   void retarget(uint32_t now_ms);
 
-  // Fallback until the first setCalib(); setup() always overwrites with config.cpp defaults.
-  Calib calib_{1.9f, 20, DUTY_MAX, 30};
+  Calib calib_{2.2f, 0, DUTY_MAX, 300};
   uint8_t pct_ = 0;
   uint8_t cap_pct_ = 100;
   uint16_t target_ = 0;
@@ -50,11 +49,5 @@ class Channel {
   uint16_t ramp_from_ = 0;
   uint32_t ramp_start_ms_ = 0;
 };
-
-// Global master brightness 0..100: a multiplier on the FINAL duty of all channels,
-// on top of per-channel percents. Active in ALL modes, including animations (unlike
-// setPercent, which animations overwrite every tick). 100 = no attenuation.
-void setMasterPct(uint8_t pct);
-uint8_t masterPct();
 
 }  // namespace channels

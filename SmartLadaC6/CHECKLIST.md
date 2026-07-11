@@ -1,72 +1,72 @@
-# SmartLada C6 — чеклист проверки стенда
+# SmartLada C6 — bench verification checklist
 
-Заполнять по ходу: столбец **Факт** — вписать замер/результат, **OK?** — `✅`/`❌`,
-**Заметки** — что заметил. ⚠️ = критично.
+Fill in as you go: the **Actual** column — write the measurement/result, **OK?** —
+`✅`/`❌`, **Notes** — what you noticed. ⚠️ = critical.
 
-| Поле | Значение |
-|------|----------|
-| Дата проверки | `10 июля 2026` |
-| Прошивка (дата/коммит) | `без версии (добавить versions)` |
-| Порт | `что это поле значит?` |
-| Кто проверял | `saschapo` |
+| Field | Value |
+|-------|-------|
+| Test date | `10 July 2026` |
+| Firmware (date/commit) | `no version (add versions)` |
+| Port | `what does this field mean?` |
+| Tested by | `saschapo` |
 
 ---
 
-## 1. Частота PWM
+## 1. PWM frequency
 
-| # | Проверка | Ожидание | Факт | OK? | Заметки |
-|---|----------|----------|------|-----|---------|
-| 1.1 | Порог мерцания снизу | ровно с ~60–100 Гц | `мерцания не обнаружено даже на 10Гц (но видеокамера его немного замечает, на камере после 1000Гц строб не виден)` |✅ | |
-| 1.2 | ⚠️ Нагрев D4184 на 20–78 кГц под нагрузкой | ключи не греются | `температура неизменна` | ✅| |
-| 1.3 | Самая тихая частота (пение БП / жужжание) | — | `мое ухо слышит писк даже на 25000 Гц, на 30000 Гц писк уже не слышно` |✅ | |
-| 1.4 | `applied` в Serial у потолка (запрос 78000) | ≈78125 Гц | `не проверял, но это и не нужно` |✅ | |
-| 1.5 | Выбранная рабочая частота | — | `30000 Гц` |✅| |
+| # | Check | Expected | Actual | OK? | Notes |
+|---|-------|----------|--------|-----|-------|
+| 1.1 | Flicker threshold from below | steady from ~60–100 Hz | `no flicker even at 10 Hz (the camera does catch it slightly; on camera the strobe is gone above 1000 Hz)` |✅ | |
+| 1.2 | ⚠️ D4184 heating at 20–78 kHz under load | switches don't heat up | `temperature unchanged` | ✅| |
+| 1.3 | Quietest frequency (PSU whine / buzz) | — | `my ear hears the whine even at 25000 Hz; at 30000 Hz it's gone` |✅ | |
+| 1.4 | `applied` in Serial near the ceiling (request 78000) | ≈78125 Hz | `not tested, and not needed` |✅ | |
+| 1.5 | Chosen working frequency | — | `30000 Hz` |✅| |
 
-## 2. Калибровка / яркость (кап снят, max_duty=100)
+## 2. Calibration / brightness (cap removed, max_duty=100)
 
-| # | Проверка | Ожидание | Факт | OK? | Заметки |
-|---|----------|----------|------|-----|---------|
-| 2.1 | ⚠️ duty 0 = полный OFF на всех каналах | нити не тлеют | `проверено вольтметром: при duty=0 напряжение 0V. при 1% duty и min_duty=20 напряжение на лампах примерно по 230mV` | ✅| |
-| 2.2 | Линейность яркости по всему слайдеру | плавно 0→100% | `визуально линейно` | ✅| |
-| 2.3 | `min_duty` CH0 stop (порог свечения) | низ слайдера виден | `min=20` | ✅| |
+| # | Check | Expected | Actual | OK? | Notes |
+|---|-------|----------|--------|-----|-------|
+| 2.1 | ⚠️ duty 0 = full OFF on all channels | filaments don't glow | `checked with a voltmeter: at duty=0 the voltage is 0V; at 1% duty and min_duty=20 the lamps read about 230mV each` | ✅| |
+| 2.2 | Brightness linearity across the whole slider | smooth 0→100% | `visually linear` | ✅| |
+| 2.3 | `min_duty` CH0 stop (glow threshold) | bottom of slider visible | `min=20` | ✅| |
 | 2.4 | `min_duty` CH1 reverse | —//— | `min=20` | ✅| |
 | 2.5 | `min_duty` CH2 turn | —//— | `min=20` |✅ | |
 | 2.6 | `min_duty` CH3 marker | —//— | `min=20` | ✅| |
-| 2.7 | gamma: 4 канала субъективно одинаковы | ровно | `γ=1.9` | ✅| |
-| 2.8 | Export JSON сохранён | файл снят | `экспорт/импорт json рабочий` | ✅| |
+| 2.7 | gamma: 4 channels subjectively equal | even | `γ=1.9` | ✅| |
+| 2.8 | Export JSON saved | file captured | `json export/import works` | ✅| |
 
-## 3. Питание / тепло (лампы под 12 В)
+## 3. Power / heat (lamps under 12 V)
 
-| # | Проверка | Ожидание | Факт | OK? | Заметки |
-|---|----------|----------|------|-----|---------|
-| 3.1 | Просадка 12 В при всех 4 на 100% | ≈12 В, без завала | `см. заметки` |✅ | `выход на БП без нагрузки — 11.23V, под 100% нагрузкой (все лампы включены) — 11.23V`|
-| 3.2 | Температура корпуса Ecola после 5 мин | тёплый, не горячий | `корпус почти не нагрелся, стал чуть теплее комнатной температуры` | ✅| |
-| 3.3 | Температура ключей D4184 | холодные | `холодные` | ✅| |
-| 3.4 | Одновременный старт каналов 0→100% | БП без hiccup | `без проблем и сбоев`| ✅| |
-| 3.5 | Мин. `soft_start_ms` без ухода БП в защиту | — | `БП не уходит в защиту, даже если постоянно "дергаешь" жестко вкл-выкл всех ламп, ему вообще всё равно на soft_start` | ✅| |
+| # | Check | Expected | Actual | OK? | Notes |
+|---|-------|----------|--------|-----|-------|
+| 3.1 | 12 V sag with all 4 at 100% | ≈12 V, no collapse | `see notes` |✅ | `PSU output no-load — 11.23V, under 100% load (all lamps on) — 11.23V`|
+| 3.2 | Ecola case temperature after 5 min | warm, not hot | `case barely warmed, slightly above room temperature` | ✅| |
+| 3.3 | D4184 switch temperature | cold | `cold` | ✅| |
+| 3.4 | Simultaneous channel start 0→100% | PSU without hiccup | `no problems or glitches`| ✅| |
+| 3.5 | Min `soft_start_ms` without the PSU tripping | — | `PSU doesn't trip even when constantly hard-toggling all lamps on/off; it doesn't care about soft_start at all` | ✅| |
 
-## 4. ⚠️ Безопасность (лампы подключены)
+## 4. ⚠️ Safety (lamps connected)
 
-| # | Проверка | Ожидание | Факт | OK? | Заметки |
-|---|----------|----------|------|-----|---------|
-| 4.1 | ⚠️ Power-cycle всего стенда → лампы OFF на старте | все выключены | | ✅| |
-| 4.2 | Предохранитель по 12 В = T4A slow-blow | стоит | `предохранитель убрал, рассчитываю на защиту БП`| ✅| |
-| 4.3 | Общая земля C6 ↔ GND БП | соединена | | ✅| |
-| 4.4 | Затворный pulldown на каждом D4184 | есть | |✅ | |
+| # | Check | Expected | Actual | OK? | Notes |
+|---|-------|----------|--------|-----|-------|
+| 4.1 | ⚠️ Power-cycle the whole bench → lamps OFF at startup | all off | | ✅| |
+| 4.2 | Fuse on 12 V = T4A slow-blow | present | `fuse removed, relying on PSU protection`| ✅| |
+| 4.3 | Common ground C6 ↔ PSU GND | connected | | ✅| |
+| 4.4 | Gate pulldown on each D4184 | present | |✅ | |
 
-## 5. Система
+## 5. System
 
-| # | Проверка | Ожидание | Факт | OK? | Заметки |
-|---|----------|----------|------|-----|---------|
-| 5.1 | Флуд HTTP (быстрый слайдер) — без падения | стабильно | |✅ | `долго (около 2-3 секунд) применяются значения текстовых полей, около 3 секунд импортируется json, при этом отзывчивость слайдеров практически realtime`|
-| 5.2 | NeoPixel: янтарный ∝ яркости | тянется | | ❌| `сейчас визуализация неудобная — он показывает сумму яркостей, и если одна лампа -> 100%, то от остальных ламп он ярче уже не станет и зависнет на своей максимальной яркости.`|
-| 5.3 | NeoPixel: зелёный при клиенте, каналы 0 | ок | | ✅| |
-| 5.4 | NeoPixel: голубое «дыхание» без клиента | ок | | ✅| |
-| 5.5 | AP переживает сон телефона / переподключение | ок | | ✅| |
+| # | Check | Expected | Actual | OK? | Notes |
+|---|-------|----------|--------|-----|-------|
+| 5.1 | HTTP flood (fast slider) — no crash | stable | |✅ | `text fields apply slowly (about 2-3 s), json imports in about 3 s, while slider responsiveness is basically realtime`|
+| 5.2 | NeoPixel: amber ∝ brightness | tracks | | ❌| `the visualization is awkward right now — it shows the sum of brightnesses, and if one lamp -> 100% it won't get brighter from the others and gets stuck at its max.`|
+| 5.3 | NeoPixel: green with a client, channels 0 | ok | | ✅| |
+| 5.4 | NeoPixel: blue "breathing" with no client | ok | | ✅| |
+| 5.5 | AP survives phone sleep / reconnect | ok | | ✅| |
 
 ---
 
-## Итоговая калибровка (перенести в Export JSON)
+## Final calibration (transfer to Export JSON)
 
 ```json
 {
@@ -81,4 +81,10 @@
 }
 ```
 
-**Общий вывод:** `устройство функционирует, прошло почти все тесты из таблицы, осталась проблема писка БП при pwm freq менее 30000 Hz (скорее всего решается заменой БП на более качественный). также надо переосмыслить поведение NeoPixel, переделать web view с помощью taste-skill (взять оттуда самые необходимые правки), добавить Master Slider, добавить кнопку Master On/Off, добавить несколько сценариев анимации ламп (например имитация поворотника, или последовательное включение каждой из ламп — надо сделать около 5 разных режимов для проверки динамической смены PWM — это могут быть технические тесты, не визуально-приятные и красивые)`
+**Overall conclusion:** `the device works, passed almost all the tests in the table; the
+remaining issue is the PSU whine at pwm freq below 30000 Hz (likely fixed by swapping the
+PSU for a better one). Also need to rethink the NeoPixel behavior, rework the web view
+with the taste-skill (take only the essential fixes), add a Master Slider, add a Master
+On/Off button, add a few lamp-animation scenarios (e.g. a turn-signal imitation, or
+sequential switching of each lamp — need about 5 different modes to test dynamic PWM
+switching; these can be technical tests, not visually pretty ones)`

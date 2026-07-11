@@ -3,19 +3,20 @@
 
 #include "../channels/channels.h"
 
-// Слой button: бортовая кнопка BOOT (GPIO9) как локальный пульт.
-//   - короткое нажатие -> следующий режим anim по кругу, включая MANUAL (в MANUAL
-//     все лампы включаются, чтобы диммировались вместе). Смену видно по цвету
-//     NeoPixel в слое status.
-//   - удержание        -> плавный диммер мастер-яркости (channels::setMasterPct),
-//     действует во ВСЕХ режимах, включая анимации; скорость 0..100% за DIM_FULL_MS.
-//     Направление чередуется от удержания к удержанию (у предела — внутрь диапазона).
-//     Уровень визуализируется на NeoPixel через status (гамма-коррекция, 0=красный,
-//     100=зелёный).
+// button layer: the onboard BOOT button (GPIO9) as a local remote.
+//   - short press -> next anim mode, wrapping, including MANUAL (in MANUAL all
+//     lamps turn on so they dim together). The change is visible via the NeoPixel
+//     color in the status layer.
+//   - hold        -> smooth master-brightness dimmer (channels::setMasterPct),
+//     active in ALL modes including animations; speed 0..100% over DIM_FULL_MS.
+//     Direction alternates from hold to hold (at a limit — back into range).
+//     The level is visualized on the NeoPixel via status (gamma correction,
+//     0=red, 100=green).
 //
-// Логика взята из стенда cineink (debounce + long-press «пока держим»), но без ISR:
-// проект однопоточный, опрос из loop() достаточен и не требует volatile/IRAM.
-// GPIO9 — strapping только в момент загрузки; в рантайме читается как обычный вход.
+// The logic is taken from the cineink bench (debounce + long-press "while held"),
+// but without an ISR: the project is single-threaded, polling from loop() is
+// enough and needs no volatile/IRAM. GPIO9 is strapping only at boot; at runtime
+// it is read as a regular input.
 
 namespace button {
 

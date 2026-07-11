@@ -7,51 +7,51 @@
 
 namespace button {
 
-static constexpr uint8_t PIN_BOOT = 9;         // кнопка BOOT (active-low)
-static constexpr uint16_t DEBOUNCE_MS = 30;    // антидребезг фронта
-static constexpr uint16_t LONG_PRESS_MS = 500; // порог перехода в диммер
-static constexpr uint32_t DIM_FULL_MS = 5000;  // ход яркости 0..100% за 5 с
+static constexpr uint8_t PIN_BOOT = 9;         // BOOT button (active-low)
+static constexpr uint16_t DEBOUNCE_MS = 30;    // edge debounce
+static constexpr uint16_t LONG_PRESS_MS = 500; // threshold to enter the dimmer
+static constexpr uint32_t DIM_FULL_MS = 5000;  // brightness travel 0..100% over 5 s
 
 static channels::Channel* s_ch = nullptr;
 
-// Антидребезг чтения пина (true = отпущена / HIGH).
+// Pin-read debounce (true = released / HIGH).
 static bool s_stable = true;
 static bool s_lastRead = true;
 static uint32_t s_debAt = 0;
 
-// Состояние жеста.
-static bool s_pressed = false;     // debounced: кнопка удерживается
-static uint32_t s_pressStart = 0;  // момент устойчивого нажатия
-static bool s_dimming = false;     // идёт удержание-диммер
-static int8_t s_dir = -1;          // направление СЛЕД. удержания (старт от 100% → вниз)
-static float s_level = 100.0f;     // мастер-яркость 0..100 (дефолт full: анимации видны сразу)
-static uint32_t s_lastRamp = 0;    // предыдущий тик рампы
+// Gesture state.
+static bool s_pressed = false;     // debounced: button held
+static uint32_t s_pressStart = 0;  // moment of the stable press
+static bool s_dimming = false;     // a hold-dimmer is in progress
+static int8_t s_dir = -1;          // direction of the NEXT hold (start from 100% → down)
+static float s_level = 100.0f;     // master brightness 0..100 (default full: animations visible)
+static uint32_t s_lastRamp = 0;    // previous ramp tick
 
-// MANUAL трактуем как «все лампы включены»: база 100% на все каналы, дальше
-// яркостью правит мастер-множитель (channels::setMasterPct) — лампы диммируются
-// все вместе, как и в анимациях.
+// Treat MANUAL as "all lamps on": base 100% on all channels, then brightness is
+// driven by the master multiplier (channels::setMasterPct) — the lamps dim
+// together, same as in the animations.
 static void manualAllOn(uint32_t now_ms) {
   for (uint8_t i = 0; i < channels::NUM_CHANNELS; i++) s_ch[i].setPercent(100, now_ms);
 }
 
 static void onClick(uint32_t now_ms) {
-  const uint8_t next = (anim::mode() + 1) % anim::NUM_MODES;  // следующий по кругу
+  const uint8_t next = (anim::mode() + 1) % anim::NUM_MODES;  // next, wrapping
   anim::setMode(next, now_ms);
-  if (next == anim::MANUAL) manualAllOn(now_ms);  // MANUAL = все лампы на мастер-яркости
+  if (next == anim::MANUAL) manualAllOn(now_ms);  // MANUAL = all lamps at master brightness
 }
 
 void begin(channels::Channel* chans) {
   s_ch = chans;
   pinMode(PIN_BOOT, INPUT_PULLUP);
   s_stable = s_lastRead = (digitalRead(PIN_BOOT) == HIGH);
-  channels::setMasterPct((uint8_t)(s_level + 0.5f));  // синхронизировать глобальный множитель
+  channels::setMasterPct((uint8_t)(s_level + 0.5f));  // sync the global multiplier
 }
 
 void tick(uint32_t now_ms) {
   if (!s_ch) return;
 
-  // ── антидребезг (active-low: LOW = нажата) ──
-  const bool raw = (digitalRead(PIN_BOOT) == HIGH);  // true = отпущена
+  // ── debounce (active-low: LOW = pressed) ──
+  const bool raw = (digitalRead(PIN_BOOT) == HIGH);  // true = released
   if (raw != s_lastRead) {
     s_lastRead = raw;
     s_debAt = now_ms;
@@ -59,21 +59,21 @@ void tick(uint32_t now_ms) {
   if (now_ms - s_debAt >= DEBOUNCE_MS) s_stable = raw;
   const bool pressedNow = !s_stable;
 
-  // ── фронт нажатия ──
+  // ── press edge ──
   if (pressedNow && !s_pressed) {
     s_pressed = true;
     s_pressStart = now_ms;
   }
 
-  // ── удержание -> плавный диммер мастер-яркости (во всех режимах) ──
+  // ── hold -> smooth master-brightness dimmer (in all modes) ──
   if (s_pressed && pressedNow) {
     if (!s_dimming && now_ms - s_pressStart >= LONG_PRESS_MS) {
       s_dimming = true;
-      // У предела принудительно направляем внутрь диапазона (иначе удержание было бы
-      // «пустым»); в середине сохраняем чередование с прошлого удержания.
+      // At a limit, force the direction back into range (else the hold would be
+      // "empty"); in the middle, keep the alternation from the previous hold.
       if (s_level >= 100.0f) s_dir = -1;
       else if (s_level <= 0.0f) s_dir = +1;
-      if (anim::mode() == anim::MANUAL) manualAllOn(now_ms);  // чтобы было что диммировать
+      if (anim::mode() == anim::MANUAL) manualAllOn(now_ms);  // give it something to dim
       s_lastRamp = now_ms;
     }
     if (s_dimming) {
@@ -85,18 +85,18 @@ void tick(uint32_t now_ms) {
         if (s_level > 100.0f) s_level = 100.0f;
         channels::setMasterPct((uint8_t)(s_level + 0.5f));
       }
-      status::brightnessOverlay((uint8_t)(s_level + 0.5f), now_ms);  // индикация уровня
+      status::brightnessOverlay((uint8_t)(s_level + 0.5f), now_ms);  // level indication
     }
   }
 
-  // ── фронт отпускания ──
+  // ── release edge ──
   if (!pressedNow && s_pressed) {
     s_pressed = false;
     if (s_dimming) {
       s_dimming = false;
-      s_dir = -s_dir;  // следующее удержание — в обратную сторону
+      s_dir = -s_dir;  // next hold goes the other way
     } else {
-      onClick(now_ms);  // короткое нажатие
+      onClick(now_ms);  // short press
     }
   }
 }

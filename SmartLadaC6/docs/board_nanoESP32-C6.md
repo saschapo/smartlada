@@ -1,65 +1,66 @@
-# Плата — MuseLab nanoESP32-C6
+# Board — MuseLab nanoESP32-C6
 
-Модуль-контроллер проекта: **MuseLab nanoESP32-C6** (wuxx).
-Репозиторий: <https://github.com/wuxx/nanoESP32-C6/>
+The project's controller module: **MuseLab nanoESP32-C6** (wuxx).
+Repository: <https://github.com/wuxx/nanoESP32-C6/>
 
-Малогабаритная (nano-формат, под макетку) отладочная плата на **ESP32-C6** с двумя
-разъёмами USB-C и бортовым полноцветным светодиодом. В проекте используется как
-временный контроллер PWM-стенда (Wi-Fi AP + web-UI); финал — Zigbee на том же чипе.
+A small (nano form factor, breadboard-friendly) dev board built on the **ESP32-C6**
+with two USB-C ports and an onboard full-color LED. Used in this project as a
+temporary controller for the PWM bench (Wi-Fi AP + web UI); the final target is
+Zigbee on the same chip.
 
-## Ключевые характеристики
+## Key specs
 
-| Параметр | Значение | Как используется в проекте |
-|----------|----------|----------------------------|
-| Чип | ESP32-C6 (RISC-V, QFN40, rev v0.2) | ядро arduino-esp32 3.3.x |
-| Flash | 16 МБ (вариант N16) | раздел `app3M_fat9M_16MB` |
-| PSRAM | нет (C6 без PSRAM) | не требуется |
-| Радио | Wi-Fi 6 (2.4 ГГц), BLE 5, **802.15.4 (Zigbee/Thread)** | сейчас — Wi-Fi AP; далее — Zigbee |
-| USB-C №1 | **CH343** USB↔UART (прошивка/лог) | альтернативный порт прошивки |
-| USB-C №2 | **нативный USB** C6 (Serial/JTAG, `GPIO12/13`) | рабочий порт `/dev/cu.usbmodem101`, `CDCOnBoot=cdc` |
-| RGB LED | бортовой WS2812 на **GPIO8** | слой `status/` (индикация режима/сети) |
-| Кнопки | BOOT (`GPIO9`) и RESET | штатная прошивка/сброс |
+| Parameter | Value | How it is used in the project |
+|-----------|-------|-------------------------------|
+| Chip | ESP32-C6 (RISC-V, QFN40, rev v0.2) | arduino-esp32 core 3.3.x |
+| Flash | 16 MB (N16 variant) | partition `app3M_fat9M_16MB` |
+| PSRAM | none (C6 has no PSRAM) | not needed |
+| Radio | Wi-Fi 6 (2.4 GHz), BLE 5, **802.15.4 (Zigbee/Thread)** | now Wi-Fi AP; later Zigbee |
+| USB-C #1 | **CH343** USB↔UART (flashing/log) | alternative flashing port |
+| USB-C #2 | **native USB** of C6 (Serial/JTAG, `GPIO12/13`) | working port `/dev/cu.usbmodem*`, `CDCOnBoot=cdc` |
+| RGB LED | onboard WS2812 on **GPIO8** | `status/` layer (mode/network indication) |
+| Buttons | BOOT (`GPIO9`) and RESET | standard flashing/reset |
 
-> Питание в проекте — от USB (логика); силовые 12 В идут отдельно с БП Ecola на
-> модули D4184, **общая земля с платой обязательна** (см.
+> Power in the project is from USB (logic); the 12 V power comes separately from the
+> Ecola PSU to the D4184 modules. A **common ground with the board is mandatory** (see
 > [mosfet_switch_D4184.md](mosfet_switch_D4184.md)).
 
-## Карта GPIO и почему каналы на GPIO0..3
+## GPIO map and why channels are on GPIO0..3
 
-Пины каналов выбраны так, чтобы обойти все занятые/опасные линии C6. Ниже — полная
-раскладка (проверено по даташиту Espressif).
+The channel pins were chosen to avoid every occupied/dangerous C6 line. Full layout
+below (verified against the Espressif datasheet).
 
-| GPIO | Назначение на C6 | Свободен под канал? |
-|------|------------------|:-------------------:|
-| **0, 1, 2, 3** | ADC1, обычные GPIO, **не strapping** | ✅ **каналы CH0..CH3** |
+| GPIO | Function on C6 | Free for a channel? |
+|------|----------------|:-------------------:|
+| **0, 1, 2, 3** | ADC1, plain GPIO, **not strapping** | ✅ **channels CH0..CH3** |
 | 4, 5 | **strapping** (MTMS/MTDI, JTAG/SDIO) | ❌ |
-| 8 | **strapping** + бортовой WS2812 | ❌ |
-| 9 | **strapping** (boot mode) + кнопка BOOT | ❌ |
-| 12, 13 | нативный USB (D−/D+) | ❌ |
-| 15 | **strapping** (источник JTAG) | ❌ |
-| 24…30 | SPI-флеш (внутрикорпусная) | ❌ |
+| 8 | **strapping** + onboard WS2812 | ❌ |
+| 9 | **strapping** (boot mode) + BOOT button | ❌ |
+| 12, 13 | native USB (D−/D+) | ❌ |
+| 15 | **strapping** (JTAG source) | ❌ |
+| 24…30 | SPI flash (in-package) | ❌ |
 
-**Итог:** `GPIO0..3` — единственная удобная непрерывная группа, которая:
-- не strapping → не влияет на режим загрузки;
-- умеет LEDC (аппаратный PWM);
-- в boot до инициализации прошивки — вход без активной подтяжки, поэтому **внешний
-  100K pull-down на затворе D4184** держит ключ закрытым (лампа выключена) в окне между
-  сбросом и `platform_pwm::forceAllLow()`.
+**Result:** `GPIO0..3` is the only convenient contiguous group that:
+- is not strapping → does not affect boot mode;
+- can do LEDC (hardware PWM);
+- at boot, before firmware init, is an input with no active pull, so the **external
+  100K pull-down on the D4184 gate** holds the switch off (lamp off) in the window
+  between reset and `platform_pwm::forceAllLow()`.
 
-Пины фиксированы прошивкой (`src/config/config.cpp` → `CHANNEL_DEFS`); поле `gpio` из
-импортируемого JSON **сознательно игнорируется** — перекоммутация на лету на силовом
-стенде опасна.
+The pins are fixed by firmware (`src/config/config.cpp` → `CHANNEL_DEFS`); the `gpio`
+field from imported JSON is **intentionally ignored** — live re-pinning on a power
+bench is dangerous.
 
-## Замечание про два USB-C
+## Note on the two USB-C ports
 
-- **Нативный порт** (Serial/JTAG прямо с C6): монитор и прошивка на одном порту при
-  `CDCOnBoot=cdc`. Рабочий вариант проекта.
-- **CH343-порт**: классический USB-UART, работает даже если нативный USB занят/недоступен.
-  Резерв на случай проблем с нативным CDC.
+- **Native port** (Serial/JTAG straight from C6): monitor and flashing on one port
+  with `CDCOnBoot=cdc`. The project's working setup.
+- **CH343 port**: a classic USB-UART, works even if the native USB is busy/unavailable.
+  A fallback in case of native-CDC issues.
 
 ---
 
-**Источники:** [wuxx/nanoESP32-C6](https://github.com/wuxx/nanoESP32-C6/),
+**Sources:** [wuxx/nanoESP32-C6](https://github.com/wuxx/nanoESP32-C6/),
 [ESP32-C6 Datasheet](https://documentation.espressif.com/esp32-c6_datasheet_en.html),
 [ESP-IDF GPIO (C6)](https://docs.espressif.com/projects/esp-idf/en/stable/esp32c6/api-reference/peripherals/gpio.html).
-Специфика проекта — README.md, `src/config/config.cpp`.
+Project specifics — README.md, `src/config/config.cpp`.

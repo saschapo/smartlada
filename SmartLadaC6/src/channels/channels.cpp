@@ -4,7 +4,7 @@
 
 namespace channels {
 
-static uint8_t g_master_pct = 100;  // глобальный множитель яркости всех каналов
+static uint8_t g_master_pct = 100;  // global brightness multiplier for all channels
 
 void setMasterPct(uint8_t pct) { g_master_pct = pct > 100 ? 100 : pct; }
 uint8_t masterPct() { return g_master_pct; }
@@ -28,7 +28,7 @@ void Channel::setCapPct(uint8_t cap_pct, uint32_t now_ms) {
 }
 
 uint16_t Channel::computeTarget() const {
-  if (pct_ == 0) return 0;  // гарантированный физический выкл
+  if (pct_ == 0) return 0;  // guaranteed physical off
   float g = powf((float)pct_ / 100.0f, calib_.gamma);
   float duty = (float)calib_.min_duty + g * (float)(calib_.max_duty - calib_.min_duty);
   float cap = (float)cap_pct_ * (float)DUTY_MAX / 100.0f;
@@ -57,8 +57,8 @@ uint16_t Channel::update(uint32_t now_ms) {
       current_ = (uint16_t)((int32_t)ramp_from_ + delta * (int32_t)elapsed / (int32_t)ss);
     }
   }
-  // Мастер-яркость масштабирует итог во всех режимах (base current_ остаётся для
-  // ramp; наружу отдаём ослабленный duty). 100 = без изменений.
+  // Master brightness scales the output in all modes (base current_ stays for the
+  // ramp; we return the attenuated duty). 100 = unchanged.
   return (uint16_t)((uint32_t)current_ * g_master_pct / 100);
 }
 

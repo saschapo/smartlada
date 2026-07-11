@@ -1,16 +1,16 @@
 #pragma once
 #include <pgmspace.h>
 
-// Одностраничный UI стенда C6. Полностью автономен: инлайн CSS/JS, без CDN.
-// Дизайн-язык — тёмная «инструментальная» тема (по вёрстке cineink): аптрейс-
-// заголовки с бордером, монохром + статус-токены, полноширинные кнопки.
-// Калибровка общая на все каналы (лампы идентичны). CH/MODES продублированы из
-// config.cpp/anim.h — при изменении там обновить и здесь.
+// Single-page UI for the C6 bench. Fully self-contained: inline CSS/JS, no CDN.
+// Design language — dark "instrument" theme (after the cineink layout): uppercase
+// headers with a border, monochrome + status tokens, full-width buttons.
+// Calibration is shared across all channels (identical lamps). CH/MODES are
+// duplicated from config.cpp/anim.h — when changing there, update here too.
 
 namespace web {
 
 static const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
-<html lang="ru"><head>
+<html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>SmartLada C6</title>
 <style>
@@ -50,59 +50,59 @@ textarea{width:100%;height:130px;background:#000;color:#cfcfcf;border:1px solid 
 </style></head><body>
 <h1>SMARTLADA</h1>
 <div class="sub">C6 · <span id="ssid">—</span> · <span id="fw">—</span></div>
-<div id="status">загрузка…</div>
+<div id="status">loading…</div>
 
 <div class="section" id="msec">
  <div class="section-header">MASTER</div>
  <div class="row"><input type="range" id="master" min="0" max="100" value="0" oninput="onMaster(this.value)"><span class="val"><span id="masterv">0</span>%</span></div>
- <div class="btn-row"><button onclick="masterOn()">ВКЛ 100%</button><button class="line" onclick="masterOff()">ВЫКЛ</button></div>
+ <div class="btn-row"><button onclick="masterOn()">ON 100%</button><button class="line" onclick="masterOff()">OFF</button></div>
 </div>
 
 <div class="section">
- <div class="section-header">РЕЖИМ <span class="hn">тест динамики PWM</span></div>
+ <div class="section-header">MODE <span class="hn">PWM dynamics test</span></div>
  <div class="modes" id="modes"></div>
 </div>
 
 <div class="section">
- <div class="section-header">КАНАЛЫ</div>
+ <div class="section-header">CHANNELS</div>
  <div id="channels"></div>
 </div>
 
 <div class="section">
- <div class="section-header">КАЛИБРОВКА <span class="hn">общая для всех ламп</span></div>
+ <div class="section-header">CALIBRATION <span class="hn">shared for all lamps</span></div>
  <div class="grid">
   <div><label>gamma (1–2.5)</label><input type="number" id="g" step="0.05" min="1" max="2.5"></div>
-  <div><label>soft_start, мс</label><input type="number" id="ss" min="0" max="1000"></div>
+  <div><label>soft_start, ms</label><input type="number" id="ss" min="0" max="1000"></div>
   <div><label>min_duty (0–1023)</label><input type="number" id="mn" min="0" max="1023"></div>
   <div><label>max_duty (0–1023)</label><input type="number" id="mx" min="0" max="1023"></div>
-  <div><label>PWM, Гц (10–30000)</label><input type="number" id="freq" min="10" max="30000"></div>
-  <div><label>Кап max duty, %</label><input type="number" id="cap" min="0" max="100"></div>
+  <div><label>PWM, Hz (10–30000)</label><input type="number" id="freq" min="10" max="30000"></div>
+  <div><label>Cap max duty, %</label><input type="number" id="cap" min="0" max="100"></div>
  </div>
- <div class="btn-row" style="margin-top:12px"><button onclick="apply()">ПРИМЕНИТЬ</button><button class="danger" onclick="removeCap()">СНЯТЬ КАП</button></div>
+ <div class="btn-row" style="margin-top:12px"><button onclick="apply()">APPLY</button><button class="danger" onclick="removeCap()">REMOVE CAP</button></div>
 </div>
 
 <div class="section">
- <div class="section-header">ТАЙМИНГИ РЕЖИМОВ <span class="hn">мс, 100–10000</span></div>
+ <div class="section-header">MODE TIMINGS <span class="hn">ms, 100–10000</span></div>
  <div class="grid">
-  <div><label>CHASE (бег), мс</label><input type="number" id="tchase" min="100" max="10000"></div>
-  <div><label>SEQ (наполн.), мс</label><input type="number" id="tseq" min="100" max="10000"></div>
-  <div><label>PULSE (дыхание), мс</label><input type="number" id="tpulse" min="100" max="10000"></div>
-  <div><label>ALT (чёт/неч), мс</label><input type="number" id="talt" min="100" max="10000"></div>
+  <div><label>CHASE (run), ms</label><input type="number" id="tchase" min="100" max="10000"></div>
+  <div><label>SEQ (fill), ms</label><input type="number" id="tseq" min="100" max="10000"></div>
+  <div><label>PULSE (breathe), ms</label><input type="number" id="tpulse" min="100" max="10000"></div>
+  <div><label>ALT (even/odd), ms</label><input type="number" id="talt" min="100" max="10000"></div>
  </div>
- <div class="btn-row" style="margin-top:12px"><button onclick="apply()">ПРИМЕНИТЬ</button></div>
+ <div class="btn-row" style="margin-top:12px"><button onclick="apply()">APPLY</button></div>
 </div>
 
 <div class="section">
- <div class="section-header">КОНФИГ JSON</div>
+ <div class="section-header">CONFIG JSON</div>
  <textarea id="json" spellcheck="false"></textarea>
  <div class="btn-row" style="margin-top:8px"><button class="line" onclick="exportJson()">EXPORT</button><button class="line" onclick="importJson()">IMPORT</button></div>
 </div>
 <div id="msg"></div>
 
 <script>
-const CH=[{key:'stop',name:'Стоп',w:10,gpio:0},{key:'reverse',name:'Задний ход',w:10,gpio:1},
-          {key:'turn',name:'Поворот',w:10,gpio:2},{key:'marker',name:'Габарит',w:10,gpio:3}];
-const MODES=['MANUAL','ПОВОРОТ','БЕГ','НАПОЛН','ДЫХАНИЕ','ЧЁТ/НЕЧ','ЕЗДА'];
+const CH=[{key:'stop',name:'Stop',w:10,gpio:0},{key:'reverse',name:'Reverse',w:10,gpio:1},
+          {key:'turn',name:'Turn',w:10,gpio:2},{key:'marker',name:'Marker',w:10,gpio:3}];
+const MODES=['MANUAL','TURN','CHASE','SEQ','PULSE','ALT','DRIVE'];
 const $=id=>document.getElementById(id);
 let cfg=null,curMode=0;
 function msg(t,cls){const m=$('msg');m.className=cls||'ok';m.textContent=t;setTimeout(()=>{if(m.textContent===t)m.textContent='';},3000);}
@@ -112,13 +112,13 @@ const pend={};
 async function post(key,url){
  if(key in pend){pend[key]=url;return;}
  pend[key]=url;
- while(key in pend){const u=pend[key];try{await fetch(u,{method:'POST'});}catch(e){msg('нет связи','err');}if(pend[key]===u)delete pend[key];}
+ while(key in pend){const u=pend[key];try{await fetch(u,{method:'POST'});}catch(e){msg('no connection','err');}if(pend[key]===u)delete pend[key];}
 }
 function renderModes(){
  $('modes').innerHTML=MODES.map((m,i)=>`<button id="mode${i}" class="mode-off" onclick="onMode(${i})">${m}</button>`).join('');
 }
 function render(){
- $('channels').innerHTML=CH.map((c,i)=>`<div class="card"><h3>${c.name}</h3><div class="meta">CH${i} · ${c.key} · ${c.w} Вт · GPIO${c.gpio}</div>
+ $('channels').innerHTML=CH.map((c,i)=>`<div class="card"><h3>${c.name}</h3><div class="meta">CH${i} · ${c.key} · ${c.w} W · GPIO${c.gpio}</div>
   <div class="row"><input type="range" id="sl${i}" min="0" max="100" value="0" oninput="onSlider(${i},this.value)"><span class="val"><span id="pl${i}">0</span>%</span></div></div>`).join('');
  fillCalib();
 }
@@ -140,16 +140,16 @@ async function apply(){
  collect();
  let ok=false;
  try{const r=await fetch('/config',{method:'POST',body:JSON.stringify(cfg)});if(r.ok){cfg=await r.json();fillCalib();ok=true;}}catch(e){}
- msg(ok?'Применено':'Ошибка применения',ok?'ok':'err');
+ msg(ok?'Applied':'Apply error',ok?'ok':'err');
  if(ok)flash($('g'));
  refreshStatus(false);
 }
-function removeCap(){if(confirm('Снять кап и разрешить 100%?')){$('cap').value=100;apply();}}
+function removeCap(){if(confirm('Remove cap and allow 100%?')){$('cap').value=100;apply();}}
 async function exportJson(){$('json').value=await(await fetch('/config.json')).text();$('json').select();}
 async function importJson(){
  let ok=false;
  try{const r=await fetch('/config',{method:'POST',body:$('json').value});if(r.ok){cfg=await r.json();fillCalib();ok=true;}}catch(e){}
- msg(ok?'Импортировано':'Ошибка импорта',ok?'ok':'err');
+ msg(ok?'Imported':'Import error',ok?'ok':'err');
  refreshStatus(false);
 }
 async function reload(){cfg=await(await fetch('/config.json')).json();render();refreshStatus(true);}
@@ -157,11 +157,11 @@ async function refreshStatus(withSliders){
  try{const s=await(await fetch('/status')).json();
   $('ssid').textContent=s.ssid;$('fw').textContent='fw '+s.fw;
   const cap=s.max_duty_cap_pct;
-  $('status').innerHTML=`клиентов <b>${s.clients}</b> · heap <b>${s.heap}</b> · PWM <b>${s.pwm_freq_hz}</b> Гц · `+
-   `кап <b class="${cap<100?'warn':'ok'}">${cap<100?cap+'%':'снят'}</b> · режим <b>${MODES[s.mode]||s.mode}</b>`;
+  $('status').innerHTML=`clients <b>${s.clients}</b> · heap <b>${s.heap}</b> · PWM <b>${s.pwm_freq_hz}</b> Hz · `+
+   `cap <b class="${cap<100?'warn':'ok'}">${cap<100?cap+'%':'off'}</b> · mode <b>${MODES[s.mode]||s.mode}</b>`;
   setModeUI(s.mode);
   if(withSliders&&s.mode===0)s.pct.forEach((p,i)=>{if($('sl'+i)){$('sl'+i).value=p;$('pl'+i).textContent=p;}});
- }catch(e){$('status').textContent='нет связи с устройством';}
+ }catch(e){$('status').textContent='no connection to device';}
 }
 renderModes();reload();
 setInterval(()=>refreshStatus(false),5000);

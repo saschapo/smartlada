@@ -10,7 +10,7 @@
 
 namespace web {
 
-static_assert(channels::NUM_CHANNELS == 4, "handleStatus рассчитан на 4 канала");
+static_assert(channels::NUM_CHANNELS == 4, "handleStatus assumes 4 channels");
 
 static WebServer server(80);
 static config::Config* s_cfg = nullptr;
@@ -22,7 +22,7 @@ static char s_json[1024];
 static void pushConfigToChannels() {
   const uint32_t now = millis();
   for (uint8_t i = 0; i < channels::NUM_CHANNELS; i++) {
-    s_chans[i].setCalib(s_cfg->calib, now);  // общая калибровка на все каналы
+    s_chans[i].setCalib(s_cfg->calib, now);  // shared calibration for all channels
     s_chans[i].setCapPct(s_cfg->max_duty_cap_pct, now);
   }
   if (s_applyGlobals) s_applyGlobals();
@@ -52,7 +52,7 @@ static void handleConfigPost() {
   }
   *s_cfg = tmp;
   pushConfigToChannels();
-  // вернуть применённый (склампленный) конфиг — экономит клиенту повторный GET
+  // return the applied (clamped) config — saves the client a follow-up GET
   if (config::toJson(*s_cfg, s_json, sizeof(s_json)) == 0)
     server.send(200, "application/json", "{\"ok\":true}");
   else
@@ -72,12 +72,12 @@ static void handleSet() {
   }
   if (pct < 0) pct = 0;
   if (pct > 100) pct = 100;
-  anim::setMode(anim::MANUAL, millis());  // ручное управление перехватывает
+  anim::setMode(anim::MANUAL, millis());  // manual control takes over
   s_chans[ch].setPercent((uint8_t)pct, millis());
   server.send(200, "application/json", "{\"ok\":true}");
 }
 
-// Master: задать один процент всем каналам сразу (и перейти в MANUAL).
+// Master: set one percent on all channels at once (and switch to MANUAL).
 static void handleAll() {
   if (!server.hasArg("pct")) {
     server.send(400, "application/json", "{\"ok\":false,\"err\":\"need pct\"}");
@@ -93,7 +93,7 @@ static void handleAll() {
   server.send(200, "application/json", "{\"ok\":true}");
 }
 
-// Переключить режим анимации (0 = MANUAL).
+// Switch the animation mode (0 = MANUAL).
 static void handleMode() {
   if (!server.hasArg("id")) {
     server.send(400, "application/json", "{\"ok\":false,\"err\":\"need id\"}");

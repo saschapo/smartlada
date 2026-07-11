@@ -23,7 +23,7 @@ void Channel::setCapPct(uint8_t cap_pct, uint32_t now_ms) {
 }
 
 uint16_t Channel::computeTarget() const {
-  if (pct_ == 0) return 0;  // гарантированный физический выкл
+  if (pct_ == 0) return 0;  // guaranteed physical off
   float g = powf((float)pct_ / 100.0f, calib_.gamma);
   float duty = (float)calib_.min_duty + g * (float)(calib_.max_duty - calib_.min_duty);
   float cap = (float)cap_pct_ * (float)DUTY_MAX / 100.0f;

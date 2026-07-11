@@ -1,8 +1,8 @@
-// SmartLada — калибровочный стенд PWM на ESP8266 (bring-up 4x D4184, low-side).
-// НЕ финальная прошивка: слои channels/ и config/ переносятся на ESP32-C6,
-// platform_pwm/ и web/ выбрасываются. Схема подключения и предупреждения — README.md.
+// SmartLada — PWM calibration bench on ESP8266 (bring-up 4x D4184, low-side).
+// NOT the final firmware: the channels/ and config/ layers are ported to ESP32-C6,
+// platform_pwm/ and web/ are discarded. Wiring and warnings — README.md.
 //
-// [КРИТИЧНО] Общая земля ESP8266 <-> БП 12 В. Предохранитель T6.3–8 А. См. README.
+// [CRITICAL] Common ground ESP8266 <-> 12 V PSU. Fuse T6.3–8 A. See README.
 
 #include <ESP8266WiFi.h>
 
@@ -22,7 +22,7 @@ static uint16_t lastDuty[channels::NUM_CHANNELS];
 static void applyGlobals() { platform_pwm::setFreq(cfg.pwm_freq_hz); }
 
 void setup() {
-  // FORCE-SAFE: все 4 канала в 0 до любой другой инициализации
+  // FORCE-SAFE: drive all 4 channels to 0 before any other init
   config::setDefaults(cfg);
   uint8_t pins[channels::NUM_CHANNELS];
   for (uint8_t i = 0; i < channels::NUM_CHANNELS; i++) pins[i] = cfg.ch[i].gpio;
@@ -37,7 +37,7 @@ void setup() {
   for (uint8_t i = 0; i < channels::NUM_CHANNELS; i++) {
     chans[i].setCalib(cfg.ch[i].calib, now);
     chans[i].setCapPct(cfg.max_duty_cap_pct, now);
-    lastDuty[i] = 0xFFFF;  // форсировать первую запись
+    lastDuty[i] = 0xFFFF;  // force the first write
   }
 
   WiFi.persistent(false);

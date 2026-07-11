@@ -1,142 +1,145 @@
-# SmartLada C6 — bring-up стенд PWM (ESP32-C6)
+# SmartLada C6 — PWM bring-up bench (ESP32-C6)
 
-Порт стенда [SmartLada (ESP8266)](../SmartLada/) на ESP32-C6 N16. Задача этапа —
-проверить 4 канала на **аппаратном PWM (LEDC)** без координатора Zigbee. Управление
-временно через Wi-Fi AP + web-UI (тот же, что на ESP8266). Финал — Zigbee на C6.
+Port of the [SmartLada (ESP8266)](../sketches/SmartLada/) bench to the ESP32-C6 N16. The goal of
+this stage is to verify 4 channels on **hardware PWM (LEDC)** without a Zigbee
+coordinator. Control is temporarily via Wi-Fi AP + web UI (the same as on ESP8266). The
+final target is Zigbee on the C6.
 
-> **Статус: fw 0.7.0-c6, прошито и работает (2026-07-11).** Стенд проверен на живых
-> лампах: 4 канала, master, 5 тест-режимов динамики + DRIVE (конечный автомат «имитация
-> езды»), NeoPixel-индикация, кнопка BOOT (смена режимов + плавный диммер мастер-яркости),
-> web-редактируемые тайминги режимов. Калибровка запечена в дефолты. Дальше — Zigbee.
+> **Status: fw 0.7.0-c6, flashed and working (2026-07-11).** Verified on live lamps:
+> 4 channels, master, 5 dynamics test modes + DRIVE (driving-simulation state machine),
+> NeoPixel indication, BOOT button (mode switching + smooth master-brightness dimmer),
+> web-editable mode timings. Calibration baked into defaults. Next — Zigbee.
 
-## Что перенесено, что переписано
+## What was ported, what was rewritten
 
-| Слой | Статус на C6 |
-|------|--------------|
-| `src/channels/` | перенесён **без изменений** (чистый C++: gamma, min/max, кап, soft-start) |
-| `src/config/` | перенесён; GPIO 0..3, дефолты = снятая калибровка, диапазон PWM 10–30000 Гц |
-| `src/platform_pwm/` | **переписан** с `analogWrite` ESP8266 на **LEDC** (10 бит, `ledcAttach/ledcWrite`) |
-| `src/anim/` | **новый** — движок режимов: 4 теста PWM с web-таймингами (CHASE/SEQ/PULSE/ALT) + TURN + DRIVE (конечный автомат «имитация езды») |
-| `src/web/` | `WebServer`/`WiFi` (arduino-esp32); UI переписан (тёмная тема, master, режимы, версия) |
-| `src/status/` | **новый** — NeoPixel: статус сети в MANUAL, цвет активного режима в анимациях |
-| `src/version.h` | `FW_VERSION` — Serial при старте, `/status`, шапка UI |
+| Layer | Status on C6 |
+|-------|--------------|
+| `src/channels/` | ported **unchanged** (pure C++: gamma, min/max, cap, soft-start) |
+| `src/config/` | ported; GPIO 0..3, defaults = captured calibration, PWM range 10–30000 Hz |
+| `src/platform_pwm/` | **rewritten** from ESP8266 `analogWrite` to **LEDC** (10 bit, `ledcAttach/ledcWrite`) |
+| `src/anim/` | **new** — mode engine: 4 PWM tests with web timings (CHASE/SEQ/PULSE/ALT) + TURN + DRIVE (driving-simulation state machine) |
+| `src/web/` | `WebServer`/`WiFi` (arduino-esp32); UI rewritten (dark theme, master, modes, version) |
+| `src/status/` | **new** — NeoPixel: network status in MANUAL, active-mode color in animations |
+| `src/button/` | **new** — BOOT button: mode switch + master-brightness dimmer |
+| `src/version.h` | `FW_VERSION` — Serial at startup, `/status`, UI header |
 
-## Карта каналов (ESP32-C6)
+## Channel map (ESP32-C6)
 
-| Idx | Key       | Название   | Мощность | GPIO   |
-|-----|-----------|------------|----------|--------|
-| CH0 | `stop`    | Стоп       | 10 Вт    | GPIO0  |
-| CH1 | `reverse` | Задний ход | 10 Вт    | GPIO1  |
-| CH2 | `turn`    | Поворот    | 10 Вт    | GPIO2  |
-| CH3 | `marker`  | Габарит    | 10 Вт    | GPIO3  |
+| Idx | Key       | Name    | Power  | GPIO   |
+|-----|-----------|---------|--------|--------|
+| CH0 | `stop`    | Stop    | 10 W   | GPIO0  |
+| CH1 | `reverse` | Reverse | 10 W   | GPIO1  |
+| CH2 | `turn`    | Turn    | 10 W   | GPIO2  |
+| CH3 | `marker`  | Marker  | 10 W   | GPIO3  |
 
-Лампы — **R10W 12V BA15S** на всех каналах. Суммарно 40 Вт / 3.33 А при 12 В.
+Lamps — **R10W 12V BA15S** on all channels. 40 W / 3.33 A total at 12 V.
 
-**Почему эти пины.** Strapping-пины C6 — `GPIO4, 5, 8, 9, 15` — под каналы запрещены.
-Также заняты: `GPIO8` = бортовой NeoPixel, `GPIO12/13` = нативный USB, `GPIO24..30` =
-SPI-флеш. `GPIO0..3` — не strapping, ADC1, умеют LEDC; при boot вход без подтяжки,
-поэтому затворный pulldown модуля D4184 держит low-side канал закрытым. Пины задаются
-в `src/config/config.cpp` (`CHANNEL_DEFS`); поле `gpio` из импортируемого JSON
-игнорируется (перекоммутация на лету на силовом стенде опасна).
+**Why these pins.** The C6 strapping pins — `GPIO4, 5, 8, 9, 15` — are off-limits for
+channels. Also taken: `GPIO8` = onboard NeoPixel, `GPIO12/13` = native USB, `GPIO24..30`
+= SPI flash. `GPIO0..3` — not strapping, ADC1, can do LEDC; at boot they are inputs with
+no pull, so the D4184 module's gate pulldown holds the low-side channel off. Pins are set
+in `src/config/config.cpp` (`CHANNEL_DEFS`); the `gpio` field from imported JSON is
+ignored (live re-pinning on a power bench is dangerous).
 
-Плата и полная карта GPIO (strapping, USB, флеш) — [docs/board_nanoESP32-C6.md](docs/board_nanoESP32-C6.md).
+Board and full GPIO map (strapping, USB, flash) — [docs/board_nanoESP32-C6.md](docs/board_nanoESP32-C6.md).
 
-## Индикация (бортовой NeoPixel, GPIO8)
+## Indication (onboard NeoPixel, GPIO8)
 
-`neopixelWrite` встроен в ядро arduino-esp32 (RMT), внешняя библиотека не нужна.
+`neopixelWrite` is built into the arduino-esp32 core (RMT), no external library needed.
 
-В **MANUAL** — статус сети; в анимации — сигнатурный цвет режима.
+In **MANUAL** — network status; in animations — the mode's signature color.
 
-| Состояние | Цвет |
-|-----------|------|
-| MANUAL, есть клиент AP | ровный зелёный |
-| MANUAL, AP без клиентов | медленное голубое «дыхание» |
-| TURN | янтарный, мигание |
-| CHASE | циан, мигание |
-| SEQ | зелёный, мигание |
-| PULSE | фиолетовый, «дыхание» |
-| ALT | красный, мигание |
-| DRIVE | синхронно с фонарём: поворот→жёлтый, задний→белый, стоп→красный, езда с габаритом→постоянное тусклое белое |
+| State | Color |
+|-------|-------|
+| MANUAL, AP client present | steady green |
+| MANUAL, AP with no clients | slow blue "breathing" |
+| TURN | amber, blinking |
+| CHASE | cyan, blinking |
+| SEQ | green, blinking |
+| PULSE | violet, "breathing" |
+| ALT | red, blinking |
+| DRIVE | in sync with the lamp: turn→yellow, reverse→white, stop→red, driving with marker→steady dim white |
 
-## Сборка и прошивка (arduino-cli)
+## Build and flash (arduino-cli)
 
-Ядро `esp32:esp32` 3.3.x. Всё в стандартном ядре (LEDC, WebServer, NeoPixel) —
-дополнительных библиотек нет.
+Core `esp32:esp32` 3.3.x. Everything is in the stock core (LEDC, WebServer, NeoPixel) —
+no extra libraries.
 
 ```sh
 FQBN="esp32:esp32:esp32c6:FlashSize=16M,CDCOnBoot=cdc,PartitionScheme=app3M_fat9M_16MB"
 arduino-cli compile -b "$FQBN" SmartLadaC6
-arduino-cli upload  -b "$FQBN" -p /dev/cu.usbmodem101 SmartLadaC6
-arduino-cli monitor -p /dev/cu.usbmodem101 -c baudrate=115200
+arduino-cli upload  -b "$FQBN" -p /dev/cu.usbmodemXXXX SmartLadaC6
+arduino-cli monitor -p /dev/cu.usbmodemXXXX -c baudrate=115200
 ```
 
-`CDCOnBoot=cdc` выводит `Serial` в нативный USB (монитор на том же порту).
+`CDCOnBoot=cdc` routes `Serial` to the native USB (monitor on the same port).
 
-## Использование
+## Usage
 
-1. После старта все 4 канала = 0% (кап по дефолту снят: `max_duty_cap = 100%`).
-2. Подключиться к Wi-Fi AP **SmartLada** (пароль `smartlada`), открыть **http://192.168.4.1**.
-3. **MASTER** — общий слайдер + ВКЛ 100%/ВЫКЛ на все каналы.
-4. **РЕЖИМ** — MANUAL + 5 тест-режимов динамики PWM (тайминги CHASE/SEQ/PULSE/ALT
-   редактируются в секции «ТАЙМИНГИ РЕЖИМОВ», 100–10000 мс) + **ЕЗДА** (сценарий имитации
-   вождения, см. [docs/TZ_drive_mode.md](docs/TZ_drive_mode.md)). Переключение
-   мгновенное, ручные слайдеры на время анимации блокируются.
-5. **КАНАЛЫ** — поканальные слайдеры; калибровка свёрнута в `<details>`.
-6. **ГЛОБАЛЬНО** — `pwm_freq_hz` (10–30000), `soft_start_ms` (0–5000), кап,
-   тайминги режимов. **КОНФИГ JSON** — Export/Import.
+1. After startup all 4 channels = 0% (cap removed by default: `max_duty_cap = 100%`).
+2. Connect to the Wi-Fi AP **SmartLada** (password `smartlada`), open **http://192.168.4.1**.
+3. **MASTER** — a shared slider + ON 100%/OFF for all channels.
+4. **MODE** — MANUAL + 5 PWM dynamics test modes (CHASE/SEQ/PULSE/ALT timings are
+   editable in the "MODE TIMINGS" section, 100–10000 ms) + **DRIVE** (driving-simulation
+   scenario, see [docs/TZ_drive_mode.md](docs/TZ_drive_mode.md)). Switching is instant;
+   manual sliders are locked during an animation.
+5. **CHANNELS** — per-channel sliders.
+6. **GLOBAL** — `pwm_freq_hz` (10–30000), `soft_start_ms` (0–5000), cap,
+   mode timings. **CONFIG JSON** — Export/Import.
 
-### Кнопка BOOT (локальное управление, GPIO9)
+### BOOT button (local control, GPIO9)
 
-Бортовая кнопка BOOT работает как локальный пульт (слой `src/button/`):
+The onboard BOOT button acts as a local remote (`src/button/` layer):
 
-| Жест | Действие |
-|------|----------|
-| Короткое нажатие | следующий режим по кругу (MANUAL → … → DRIVE → MANUAL) |
-| Удержание (≥0.6 с) | плавный диммер мастер-яркости, 0↔100% за 6 с |
+| Gesture | Action |
+|---------|--------|
+| Short press | next mode, wrapping (MANUAL → … → DRIVE → MANUAL) |
+| Hold (≥0.5 s) | smooth master-brightness dimmer, 0↔100% over 5 s |
 
-**Мастер-яркость** — глобальный множитель итогового duty (`channels::setMasterPct`),
-действует **во всех режимах**, включая анимации: удержание во время анимации плавно
-затемняет/осветляет всю сцену. В **MANUAL** все лампы включаются на 100% базы, так что
-мастер диммирует их вместе (MANUAL полноценно в кольце режимов). Направление диммера
-**чередуется** от удержания к удержанию; у предела (0/100%) — принудительно внутрь
-диапазона. Старт после включения — 100% (чтобы анимации были видны сразу), первое
-удержание идёт вниз. Выключение/включение — диммер до 0 / вверх от 0.
+**Master brightness** is a global multiplier on the final duty (`channels::setMasterPct`),
+active **in all modes** including animations: holding during an animation smoothly
+dims/brightens the whole scene. In **MANUAL** all lamps turn on at 100% base, so the
+master dims them together (MANUAL is fully part of the mode ring). The dimmer direction
+**alternates** from hold to hold; at a limit (0/100%) it is forced back into range.
+Startup level is 100% (so animations are visible immediately), the first hold goes down.
+Off/on is just dimming down to 0 / up from 0.
 
-Уровень визуализируется на бортовом NeoPixel: **0% — яркий красный**, **100% — полный
-зелёный**, между ними — белый с **гамма-коррекцией** (b∝уровень^2.2), чтобы яркость
-менялась равномерно на глаз по всему ходу (линейная шкала в верхней трети почти не
-различалась).
+The level is visualized on the onboard NeoPixel: **0% — bright red**, **100% — full
+green**, in between — white with **gamma correction** (b ∝ level^2.2), so brightness
+changes evenly to the eye across the whole range (a linear scale was barely
+distinguishable in the top third).
 
-> GPIO9 — strapping только в момент загрузки (кнопку при включении питания не держать —
-> уйдёт в download-mode); в рантайме читается как обычный вход.
+> GPIO9 is strapping only at boot (do not hold the button while powering up — it enters
+> download mode); at runtime it is read as a regular input.
 
 HTTP API: `GET /`, `GET /config.json`, `POST /config`, `POST /set?ch=N&pct=P`,
 `POST /all?pct=P` (master), `POST /mode?id=N` (0=MANUAL..6=DRIVE), `GET /status`
 (fw, ssid, clients, heap, freq, cap, mode, pct[]).
 
-Режимы анимации (`src/anim/`): любое ручное действие (`/set`, `/all`) сбрасывает
-режим в MANUAL. Маппинг яркости (логика в `channels/` общая с ESP8266):
+Animation modes (`src/anim/`): any manual action (`/set`, `/all`) resets the mode to
+MANUAL. Brightness mapping (logic in `channels/`, shared with ESP8266):
 `slider% → gamma → [min_duty..max_duty] → min(duty, cap) → soft-start ramp → LEDC`.
 
-## ⚠️ При подключении силового железа
+## ⚠️ When connecting power hardware
 
-Схема силового ключа (D4184, low-side) — [docs/mosfet_switch_D4184.md](docs/mosfet_switch_D4184.md).
+Power switch schematic (D4184, low-side) — [docs/mosfet_switch_D4184.md](docs/mosfet_switch_D4184.md).
 
-Источник ламп — **Ecola B2L080ESB**: стабилизированный DC 12 В, 80 Вт, макс 6.6 А,
-защита от КЗ/перегруза. Это DC-блок (не электронный трансформатор), поэтому low-side
-PWM на D4184 корректен. Нагрузка 40 Вт / 3.33 А — ~50% БП, при снятом капе тоже в норме.
+Lamp source — **Ecola B2L080ESB**: regulated DC 12 V, 80 W, max 6.6 A, short-circuit /
+overload protection. It is a DC block (not an electronic transformer), so low-side PWM on
+the D4184 is correct. The 40 W / 3.33 A load is ~50% of the PSU, fine even with the cap
+removed.
 
-- **Общая земля** C6 ↔ GND БП обязательна (опора для PWM).
-- **Предохранитель** по выходу 12 В — **T4A slow-blow** (номинал 3.33 А, ниже потолка
-  БП 6.6 А, терпит soft-started бросок). Прежние T6.3–8 А были под 68 Вт — теперь много.
-- **Пусковой бросок.** Холодная нить R10W ≈ 1–1.5 Ом → бросок ~8–10 А/лампу. Гасится
-  soft-start ramp; **`soft_start_ms=0` с этими лампами не ставить**, особенно при
-  одновременном включении каналов, иначе БП может уйти в защиту (hiccup).
-- Затворный pulldown на каждом D4184 обязателен; пины `GPIO0..3` boot-safe, но это его
-  не отменяет. На первом включении проверить «duty 0 = лампа выключена».
+- **Common ground** C6 ↔ PSU GND is mandatory (PWM reference).
+- **Fuse** on the 12 V output — **T4A slow-blow** (rated 3.33 A, below the PSU's 6.6 A
+  ceiling, tolerates the soft-started inrush). The former T6.3–8 A was for 68 W — too much now.
+- **Inrush.** A cold R10W filament is ≈ 1–1.5 Ω → ~8–10 A/lamp inrush. Absorbed by the
+  soft-start ramp; **do not set `soft_start_ms=0` with these lamps**, especially when
+  channels turn on simultaneously, or the PSU may trip (hiccup).
+- The gate pulldown on each D4184 is mandatory; pins `GPIO0..3` are boot-safe, but that
+  does not replace it. On first power-up verify "duty 0 = lamp off".
 
-## Следующий этап
+## Next stage
 
-Zigbee-прошивка на C6 (`ZigbeeDimmableLight`, 4 dimmable-эндпоинта). В ядре уже есть
-разделы `PartitionScheme=zigbee*`. Слой `channels/` и числа калибровки переносятся
-без изменений; `web/` и `status/` (в части AP) заменяются на Zigbee-логику.
+Zigbee firmware on the C6 (`ZigbeeDimmableLight`, 4 dimmable endpoints). The core already
+has `PartitionScheme=zigbee*` options. The `channels/` layer and the calibration numbers
+carry over unchanged; `web/` and `status/` (the AP part) are replaced by Zigbee logic.

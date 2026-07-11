@@ -6,27 +6,27 @@
 
 namespace config {
 
-// Лампы: R10W 12V BA15S на всех 4 каналах (10 Вт). power_w — только для UI.
-// ESP32-C6: пины boot-safe. Запрещены — strapping (GPIO4/5/8/9/15),
-// нативный USB (GPIO12/13), SPI-флеш (GPIO24..30) и NeoPixel (GPIO8).
+// Lamps: R10W 12V BA15S on all 4 channels (10 W). power_w is UI-only.
+// ESP32-C6: boot-safe pins. Forbidden — strapping (GPIO4/5/8/9/15),
+// native USB (GPIO12/13), SPI flash (GPIO24..30) and NeoPixel (GPIO8).
 const ChannelDef CHANNEL_DEFS[channels::NUM_CHANNELS] = {
-    {"stop", "Стоп", 10, 0},
-    {"reverse", "Задний ход", 10, 1},
-    {"turn", "Поворот", 10, 2},
-    {"marker", "Габарит", 10, 3},
+    {"stop", "Stop", 10, 0},
+    {"reverse", "Reverse", 10, 1},
+    {"turn", "Turn", 10, 2},
+    {"marker", "Marker", 10, 3},
 };
 
-// Дефолты = снятая на стенде 2026-07-10 калибровка (R10W, Ecola 12В/80Вт).
-// gamma расширена до 1.0..2.5 для подбора; на стенде выбрано 1.9.
+// Defaults = calibration taken on the bench 2026-07-10 (R10W, Ecola 12V/80W).
+// gamma range widened to 1.0..2.5 for tuning; 1.9 chosen on the bench.
 static constexpr float GAMMA_MIN = 1.0f, GAMMA_MAX = 2.5f, GAMMA_DEFAULT = 1.9f;
-// Рабочий диапазон PWM (аппаратно LEDC тянет до 78 кГц при 10 бит, но выше 30 кГц
-// на этих лампах смысла нет — потолок сведён к 30 кГц).
+// Working PWM range (LEDC can do up to 78 kHz at 10 bit in hardware, but above
+// 30 kHz makes no sense with these lamps — ceiling reduced to 30 kHz).
 static constexpr uint32_t FREQ_MIN = 10, FREQ_MAX = 30000, FREQ_DEFAULT = 30000;
 static constexpr uint16_t SOFT_START_MAX = 5000, SOFT_START_DEFAULT = 30;
-static constexpr uint16_t MIN_DUTY_DEFAULT = 20;  // порог свечения нити R10W
-// Кап снят: на этом стенде 100% проверено безопасным (40 Вт из 80 Вт БП).
+static constexpr uint16_t MIN_DUTY_DEFAULT = 20;  // R10W filament glow threshold
+// Cap removed: on this bench 100% is verified safe (40 W out of the 80 W PSU).
 static constexpr uint8_t CAP_DEFAULT = 100;
-// Тайминги тест-режимов анимации (мс): общий диапазон + дефолты (прежние константы).
+// Animation test-mode timings (ms): common range + defaults (former constants).
 static constexpr uint16_t ANIM_MIN = 100, ANIM_MAX = 10000;
 static constexpr uint16_t CHASE_DEFAULT = 200, SEQ_DEFAULT = 400;
 static constexpr uint16_t PULSE_DEFAULT = 2000, ALT_DEFAULT = 450;
@@ -81,8 +81,8 @@ size_t toJson(const Config& cfg, char* buf, size_t buflen) {
   return (size_t)n;
 }
 
-// Ищет "key": <число>. Минимальный парсер под нашу плоскую схему (все значения —
-// числа). Возвращает false, если ключ не найден или после него не число.
+// Finds "key": <number>. Minimal parser for our flat schema (all values are
+// numbers). Returns false if the key is missing or not followed by a number.
 static bool findNum(const char* json, const char* key, double& out) {
   char pat[24];
   snprintf(pat, sizeof(pat), "\"%s\"", key);

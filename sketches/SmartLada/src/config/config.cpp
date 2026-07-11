@@ -7,12 +7,12 @@
 namespace config {
 
 const ChannelDef CHANNEL_DEFS[channels::NUM_CHANNELS] = {
-    {"stop", "Стоп", 21, 4, 300},
-    {"reverse", "Задний ход", 21, 5, 300},
-    // GPIO15: не 12/14 (I2C OLED платы HW-364A); pulldown платы держит канал
-    // закрытым при boot. Ничто внешнее не должно тянуть GPIO15 вверх при старте!
-    {"turn", "Поворот", 21, 15, 300},
-    {"marker", "Габарит", 5, 13, 200},
+    {"stop", "Stop", 21, 4, 300},
+    {"reverse", "Reverse", 21, 5, 300},
+    // GPIO15: not 12/14 (I2C OLED on the HW-364A board); the board's pulldown holds
+    // the channel off at boot. Nothing external must pull GPIO15 high at startup!
+    {"turn", "Turn", 21, 15, 300},
+    {"marker", "Marker", 5, 13, 200},
 };
 
 static constexpr float GAMMA_MIN = 1.8f, GAMMA_MAX = 2.6f, GAMMA_DEFAULT = 2.2f;
@@ -75,8 +75,8 @@ size_t toJson(const Config& cfg, char* buf, size_t buflen) {
   return off + (size_t)n;
 }
 
-// Ищет "key": <число> в диапазоне [p, end). Минимальный парсер под нашу
-// фиксированную схему (все значения — числа, без экранирования строк).
+// Finds "key": <number> in the range [p, end). Minimal parser for our fixed schema
+// (all values are numbers, no string escaping).
 static bool findNum(const char* p, const char* end, const char* key, double& out) {
   char pat[24];
   snprintf(pat, sizeof(pat), "\"%s\"", key);
@@ -99,8 +99,8 @@ static bool findNum(const char* p, const char* end, const char* key, double& out
   return false;
 }
 
-// Находит объект { ... } секции канала по её ключу. Внутри объектов каналов
-// вложенных скобок нет (значения — только числа), поэтому первый '}' — конец.
+// Finds a channel section's { ... } object by its key. Channel objects contain no
+// nested braces (values are only numbers), so the first '}' is the end.
 static bool findSection(const char* json, const char* key, const char** beg,
                         const char** end) {
   char pat[24];
@@ -153,7 +153,7 @@ bool fromJson(const char* json, Config& cfg) {
       c.soft_start_ms = (uint16_t)clampd(v, 0, SOFT_START_MAX);
       applied++;
     }
-    // "gpio" из JSON игнорируется: пины фиксированы прошивкой (см. README)
+    // "gpio" from JSON is ignored: pins are fixed by firmware (see README)
   }
   clamp(cfg);
   return applied > 0;

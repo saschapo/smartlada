@@ -2,7 +2,7 @@
 
 ## Canonical ("iconic") timing
 
-Тайминг, который большинство инстинктивно узнаёт как стандартный автомобильный поворотник.
+The timing most people instinctively recognize as a standard automotive turn signal.
 
 | Parameter | Value |
 |-----------|------:|
@@ -14,7 +14,7 @@
 
 ## Alternative classic values
 
-Электромеханические реле-прерыватели слегка различаются.
+Electromechanical flasher relays vary slightly.
 
 | ON | OFF | Cycle | Frequency |
 |---:|----:|------:|----------:|
@@ -26,7 +26,7 @@
 
 ## Hazard lights
 
-Аварийка использует **точно тот же тайминг**, что и поворотник.
+Hazards use **exactly the same timing** as the turn signal.
 
 - ON: **333 ms**
 - OFF: **333 ms**
@@ -35,6 +35,6 @@
 
 ---
 
-**Применение в прошивке:** `anim.cpp` → `TURN_BLINK_MS = 333` (полупериод) для режимов
-TURN, ALT-подобных миганий и всех blink-фаз DRIVE (поворотник/аварийка/подтормаживание).
-Альтернативные значения выше — для проверки «на глаз», меняются одной константой.
+**Use in firmware:** `anim.cpp` → `TURN_BLINK_MS = 333` (half-period) for the TURN
+mode, ALT-like blinking, and all DRIVE blink phases (turn signal / hazard). The
+alternative values above are for eyeballing; they change with a single constant.

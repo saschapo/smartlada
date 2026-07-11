@@ -4,7 +4,7 @@
 
 namespace platform_pwm {
 
-static constexpr uint8_t PWM_RES_BITS = 10;  // 0..1023, совпадает с DUTY_MAX
+static constexpr uint8_t PWM_RES_BITS = 10;  // 0..1023, matches DUTY_MAX
 static constexpr uint8_t MAX_PINS = 8;
 
 static uint8_t s_pins[MAX_PINS];
@@ -12,7 +12,7 @@ static uint8_t s_count = 0;
 
 void forceAllLow(const uint8_t* pins, uint8_t count) {
   for (uint8_t i = 0; i < count; i++) {
-    // LOW в выходной регистр до переключения в OUTPUT — без импульса на затворе
+    // LOW into the output latch before switching to OUTPUT — no glitch on the gate
     digitalWrite(pins[i], LOW);
     pinMode(pins[i], OUTPUT);
     digitalWrite(pins[i], LOW);
@@ -24,8 +24,8 @@ void begin(const uint8_t* pins, uint8_t count, uint32_t freq_hz) {
   s_count = count;
   for (uint8_t i = 0; i < count; i++) {
     s_pins[i] = pins[i];
-    // ledcAttach сам выделяет канал LEDC под пин; стартовое значение 0 (LOW).
-    // false = канал LEDC не выделился → write() по этому пину станет no-op.
+    // ledcAttach allocates an LEDC channel for the pin; initial value 0 (LOW).
+    // false = no LEDC channel was allocated -> write() on this pin becomes a no-op.
     if (!ledcAttach(pins[i], freq_hz, PWM_RES_BITS))
       Serial.printf("LEDC attach FAILED on GPIO%u\n", pins[i]);
     ledcWrite(pins[i], 0);
@@ -35,7 +35,7 @@ void begin(const uint8_t* pins, uint8_t count, uint32_t freq_hz) {
 void setFreq(uint32_t freq_hz) {
   uint32_t applied = 0;
   for (uint8_t i = 0; i < s_count; i++) {
-    // возвращает фактически установленную частоту, 0 — если недостижима при 10 бит
+    // returns the actually set frequency, 0 if unreachable at 10 bit
     uint32_t a = ledcChangeFrequency(s_pins[i], freq_hz, PWM_RES_BITS);
     if (i == 0) applied = a;
   }

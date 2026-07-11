@@ -1,16 +1,16 @@
 #pragma once
 #include <pgmspace.h>
 
-// Одностраничный UI стенда. Полностью автономен: инлайн CSS/JS, без CDN.
-// Названия/ключи каналов продублированы в JS-константе CH — при изменении
-// карты каналов в config.cpp обновить и здесь.
+// Single-page bench UI. Fully self-contained: inline CSS/JS, no CDN.
+// Channel names/keys are duplicated in the JS constant CH — when changing the
+// channel map in config.cpp, update here too.
 
 namespace web {
 
 static const char INDEX_HTML[] PROGMEM = R"rawliteral(<!DOCTYPE html>
-<html lang="ru"><head>
+<html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>SmartLada — стенд PWM</title>
+<title>SmartLada — PWM bench</title>
 <style>
 body{font-family:system-ui,sans-serif;margin:0 auto;padding:12px;background:#1b1e23;color:#e8e8e8;max-width:760px}
 h1{font-size:1.3em;margin:8px 0}
@@ -31,42 +31,42 @@ button.warn{background:#dc2626}
 textarea{width:100%;height:180px;font-family:monospace;font-size:.8em;box-sizing:border-box}
 .capon{color:#fbbf24}.capoff{color:#f87171}
 </style></head><body>
-<h1>SmartLada — стенд PWM (ESP8266)</h1>
-<div id="status">загрузка…</div>
+<h1>SmartLada — PWM bench (ESP8266)</h1>
+<div id="status">loading…</div>
 <div id="channels"></div>
 <div class="card">
- <h2>Глобальные параметры</h2>
+ <h2>Global parameters</h2>
  <div class="cal">
-  <div><label>PWM, Гц (100–1000)</label><input type="number" id="freq" min="100" max="1000"></div>
-  <div><label>Кап max duty, % (0–100)</label><input type="number" id="cap" min="0" max="100"></div>
+  <div><label>PWM, Hz (100–1000)</label><input type="number" id="freq" min="100" max="1000"></div>
+  <div><label>Cap max duty, % (0–100)</label><input type="number" id="cap" min="0" max="100"></div>
  </div>
- <button onclick="apply()">Применить</button>
- <button class="warn" onclick="removeCap()">Снять кап (100%)</button>
+ <button onclick="apply()">Apply</button>
+ <button class="warn" onclick="removeCap()">Remove cap (100%)</button>
 </div>
 <div class="card">
- <h2>Экспорт / импорт конфига</h2>
+ <h2>Config export / import</h2>
  <textarea id="json" spellcheck="false"></textarea>
  <button onclick="exportJson()">Export JSON</button>
  <button onclick="importJson()">Import JSON</button>
 </div>
 <div id="msg"></div>
 <script>
-const CH=[{key:'stop',name:'Стоп',w:21},{key:'reverse',name:'Задний ход',w:21},
-          {key:'turn',name:'Поворот',w:21},{key:'marker',name:'Габарит',w:5}];
+const CH=[{key:'stop',name:'Stop',w:21},{key:'reverse',name:'Reverse',w:21},
+          {key:'turn',name:'Turn',w:21},{key:'marker',name:'Marker',w:5}];
 const $=id=>document.getElementById(id);
 let cfg=null;
 function msg(t){$('msg').textContent=t;setTimeout(()=>{if($('msg').textContent===t)$('msg').textContent='';},3000);}
 function render(){
  let h='';
  CH.forEach((c,i)=>{const o=cfg.channels[c.key];
-  h+=`<div class="card"><h2>${c.name}</h2><div class="sub">CH${i} · ${c.key} · ${c.w} Вт · GPIO${o.gpio}</div>
+  h+=`<div class="card"><h2>${c.name}</h2><div class="sub">CH${i} · ${c.key} · ${c.w} W · GPIO${o.gpio}</div>
   <div class="row"><input type="range" id="sl${i}" min="0" max="100" value="0" oninput="onSlider(${i},this.value)">
   <input type="number" id="pv${i}" min="0" max="100" value="0" onchange="onSlider(${i},this.value)"> %</div>
   <div class="cal">
    <div><label>gamma (1.8–2.6)</label><input type="number" id="g${i}" step="0.05" min="1.8" max="2.6" value="${o.gamma}"></div>
    <div><label>min_duty (0–1023)</label><input type="number" id="mn${i}" min="0" max="1023" value="${o.min_duty}"></div>
    <div><label>max_duty (0–1023)</label><input type="number" id="mx${i}" min="0" max="1023" value="${o.max_duty}"></div>
-   <div><label>soft_start, мс (0–1000)</label><input type="number" id="ss${i}" min="0" max="1000" value="${o.soft_start_ms}"></div>
+   <div><label>soft_start, ms (0–1000)</label><input type="number" id="ss${i}" min="0" max="1000" value="${o.soft_start_ms}"></div>
   </div></div>`;});
  $('channels').innerHTML=h;
  $('freq').value=cfg.pwm_freq_hz;$('cap').value=cfg.max_duty_cap_pct;
@@ -78,11 +78,11 @@ function onSlider(i,v){
  sendPct(i,v);
 }
 async function sendPct(i,v){
- if(i in pend){pend[i]=v;return;}   // запрос в полёте — запомнить последнее значение
+ if(i in pend){pend[i]=v;return;}   // request in flight — remember the latest value
  pend[i]=v;
  while(i in pend){
   const val=pend[i];
-  try{await fetch('/set?ch='+i+'&pct='+val,{method:'POST'});}catch(e){msg('нет связи');}
+  try{await fetch('/set?ch='+i+'&pct='+val,{method:'POST'});}catch(e){msg('no connection');}
   if(pend[i]===val)delete pend[i];
  }
 }
@@ -95,11 +95,11 @@ function collect(){
 async function apply(){
  collect();
  const r=await fetch('/config',{method:'POST',body:JSON.stringify(cfg)}).catch(()=>null);
- msg(r&&r.ok?'Применено':'Ошибка применения');
+ msg(r&&r.ok?'Applied':'Apply error');
  await reload();
 }
 function removeCap(){
- if(confirm('Снять кап и разрешить 100% мощности? Переход пройдёт через soft-start.')){
+ if(confirm('Remove cap and allow 100% power? The transition goes through soft-start.')){
   $('cap').value=100;apply();
  }
 }
@@ -109,7 +109,7 @@ async function exportJson(){
 }
 async function importJson(){
  const r=await fetch('/config',{method:'POST',body:$('json').value}).catch(()=>null);
- msg(r&&r.ok?'Импортировано':'Ошибка импорта');
+ msg(r&&r.ok?'Imported':'Import error');
  await reload();
 }
 async function reload(){
@@ -121,10 +121,10 @@ async function refreshStatus(withSliders){
  try{
   const s=await(await fetch('/status')).json();
   const cap=s.max_duty_cap_pct;
-  $('status').innerHTML=`MAC ${s.mac} · heap ${s.heap} · PWM ${s.pwm_freq_hz} Гц · кап: `+
-   (cap<100?`<span class="capon">${cap}% активен</span>`:`<span class="capoff">снят (100%)</span>`);
+  $('status').innerHTML=`MAC ${s.mac} · heap ${s.heap} · PWM ${s.pwm_freq_hz} Hz · cap: `+
+   (cap<100?`<span class="capon">${cap}% active</span>`:`<span class="capoff">off (100%)</span>`);
   if(withSliders)s.pct.forEach((p,i)=>{$('sl'+i).value=p;$('pv'+i).value=p;});
- }catch(e){$('status').textContent='нет связи с устройством';}
+ }catch(e){$('status').textContent='no connection to device';}
 }
 reload();
 setInterval(()=>refreshStatus(false),5000);
