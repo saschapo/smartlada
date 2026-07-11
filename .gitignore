@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+
+# Локальные настройки инструментов
+.claude/
+
+# Артефакты сборки arduino-cli
+build/
+*.bin
+*.elf
+*.map
