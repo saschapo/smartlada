@@ -75,7 +75,8 @@ void setup() {
 
   applog::begin();          // mount LittleFS + boot anchor
   thermal::begin();
-  thermal::dumpBus(Serial);  // print ROM addresses for the CONFIGURED[] table
+  thermal::dumpBus(Serial);      // print ROM addresses for the CONFIGURED[] table
+  thermal::dumpScratch(Serial);  // TEMP: clone check (reserved-byte signature)
   stats::begin();
   tempLogInit();
 
@@ -96,6 +97,20 @@ void setup() {
     Serial.println(F("OLED not found, continuing without display"));
 }
 
+// TEMP debug: print raw reading + present flag + cumulative error count every 2 s
+// so bus glitches (-127 disconnect / CRC) are visible on serial. Remove after the
+// bus wiring is validated (drop with thermal::rawC/errorCount).
+static uint32_t s_dbgT = 0;
+static void debugSerialTick(uint32_t now_ms) {
+  if (now_ms - s_dbgT < 2000) return;
+  s_dbgT = now_ms;
+  Serial.printf("t=%lus  psu raw=%.2f present=%d err=%lu | body raw=%.2f present=%d err=%lu\n",
+                (unsigned long)(now_ms / 1000), (double)thermal::rawC(0),
+                thermal::present(0), (unsigned long)thermal::errorCount(0),
+                (double)thermal::rawC(1), thermal::present(1),
+                (unsigned long)thermal::errorCount(1));
+}
+
 void loop() {
   web::handle();
   const uint32_t now = millis();
@@ -103,4 +118,5 @@ void loop() {
   stats::tick(now);
   tempLogTick(now);
   display::tick(now);
+  debugSerialTick(now);
 }

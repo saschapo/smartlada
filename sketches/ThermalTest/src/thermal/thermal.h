@@ -25,9 +25,19 @@ bool  present(uint8_t idx);
 // Copies the resolved 8-byte ROM of a slot; false if the slot has no sensor.
 bool  getRom(uint8_t idx, uint8_t out[8]);
 
+// Diagnostics (TEMPORARY, bus debug): last raw getTempC (may be -127/85) and the
+// count of invalid reads since begin(). Remove with the serial telemetry.
+float    rawC(uint8_t idx);
+uint32_t errorCount(uint8_t idx);
+
 // Bring-up: list every device on the bus (ROM + current temp) to `out`.
 // Blocking (used once at boot before the main loop). Paste the printed addresses
 // into CONFIGURED[] in thermal.cpp to pin each physical sensor to its point.
 void  dumpBus(Print& out);
+
+// Diagnostics (TEMPORARY, clone check): dump the 9-byte scratchpad of every device
+// and flag the genuine-DS18B20 reserved-byte signature (sp[5]=0xFF, sp[7]=0x10,
+// 12-bit config 0x7F). Blocking; call once at boot.
+void  dumpScratch(Print& out);
 
 }  // namespace thermal

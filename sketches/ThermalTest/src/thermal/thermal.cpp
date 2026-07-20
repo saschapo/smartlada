@@ -18,7 +18,7 @@ const char* const LABELS[NUM_SENSORS] = {"psu", "body"};
 // heat one point and see which value rises; if it's the wrong slot, swap the two
 // lines below. All-zero = unconfigured -> fall back to bus-discovery order.
 static const DeviceAddress CONFIGURED[NUM_SENSORS] = {
-    {0x28, 0x1D, 0x1B, 0x74, 0x00, 0x00, 0x00, 0xA5},  // psu
+    {0x28, 0x45, 0x6E, 0x6F, 0x00, 0x00, 0x00, 0x39},  // psu (replacement 2026-07-12)
     {0x28, 0xDF, 0x2D, 0x6D, 0x00, 0x00, 0x00, 0xE7},  // body
 };
 
@@ -29,6 +29,8 @@ static DeviceAddress s_rom[NUM_SENSORS];
 static bool s_have[NUM_SENSORS];      // a sensor is assigned to this slot
 static bool s_present[NUM_SENSORS];   // last read was valid
 static float s_temp[NUM_SENSORS];     // last good reading (NaN otherwise)
+static float s_raw[NUM_SENSORS];      // TEMP debug: last raw getTempC
+static uint32_t s_err[NUM_SENSORS];   // TEMP debug: invalid reads since begin()
 
 enum State { IDLE, CONVERTING };
 static State s_state = IDLE;
@@ -74,6 +76,8 @@ void begin() {
   for (uint8_t i = 0; i < NUM_SENSORS; i++) {
     s_present[i] = false;
     s_temp[i] = NAN;
+    s_raw[i] = NAN;
+    s_err[i] = 0;
   }
   s_state = IDLE;
   s_cycleStart = millis() - SAMPLE_PERIOD_MS;   // read on the first tick
@@ -90,6 +94,8 @@ static void readAll() {
     // DEVICE_DISCONNECTED_C (-127) and any out-of-spec value fail the range test;
     // the full conversion wait rules out the false 85.0 power-on reading.
     bool ok = (t > -55.0f && t < 125.0f);
+    s_raw[i] = t;                 // TEMP debug
+    if (!ok) s_err[i]++;          // TEMP debug
     s_present[i] = ok;
     s_temp[i] = ok ? t : NAN;
   }
@@ -122,6 +128,9 @@ bool getRom(uint8_t idx, uint8_t out[8]) {
   return true;
 }
 
+float rawC(uint8_t idx) { return idx < NUM_SENSORS ? s_raw[idx] : NAN; }
+uint32_t errorCount(uint8_t idx) { return idx < NUM_SENSORS ? s_err[idx] : 0; }
+
 void dumpBus(Print& out) {
   uint8_t n = s_sensors.getDeviceCount();
   out.printf("thermal: %u device(s) on 1-Wire bus (GPIO%u)\n", n, ONE_WIRE_PIN);
@@ -138,6 +147,28 @@ void dumpBus(Print& out) {
     out.printf("  %.2f C\n", s_sensors.getTempC(a));
   }
   out.println("  -> paste addresses into CONFIGURED[] (thermal.cpp) to pin points");
+}
+
+void dumpScratch(Print& out) {
+  uint8_t n = s_sensors.getDeviceCount();
+  out.printf("scratchpad check: %u device(s)  (genuine: sp[5]=FF sp[7]=10 cfg=7F)\n", n);
+  for (uint8_t i = 0; i < n; i++) {
+    DeviceAddress a;
+    if (!s_sensors.getAddress(a, i)) {
+      out.printf("  [%u] address read failed\n", i);
+      continue;
+    }
+    uint8_t sp[9];
+    bool crcok = s_sensors.readScratchPad(a, sp);
+    out.printf("  [%u] ", i);
+    for (uint8_t b = 0; b < 8; b++) out.printf("%02X", a[b]);
+    out.print("  sp=");
+    for (uint8_t b = 0; b < 9; b++) out.printf("%02X", sp[b]);
+    // cpetrich reserved-byte signature for a genuine DS18B20 die.
+    bool genuine = crcok && sp[5] == 0xFF && sp[7] == 0x10 && sp[4] == 0x7F;
+    out.printf("  crc=%s cfg=%02X -> %s\n", crcok ? "ok" : "BAD", sp[4],
+               genuine ? "genuine-like" : "CLONE?");
+  }
 }
 
 }  // namespace thermal
