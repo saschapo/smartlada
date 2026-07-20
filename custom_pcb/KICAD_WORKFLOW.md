@@ -148,6 +148,14 @@ pushing back rather than accepting the analysis.
   but 4.29 mm of radius — a 1 mm wide copper ring 8.6 mm across, shorting GND onto a
   MOSFET gate pad. It is invisible as an error until DRC names the coordinates. **After
   drawing an arc, look at it; if it closed into a ring, undo immediately.**
+- **Custom libraries registered in the *global* tables live outside the repo**, with
+  absolute paths. A clone on another machine then cannot resolve them, and any local
+  edit to them is invisible to git — which is how the 3D-model and courtyard fixes here
+  were nearly lost. Fixed by copying them to `custom_pcb/libs/` and registering them in
+  **project-level** `sym-lib-table` / `fp-lib-table` next to the `.kicad_pro`, using
+  `${KIPRJMOD}/../libs/...`. Project tables take precedence over global ones.
+  Note the schematic reaches the same `Vendor.kicad_sym` under two nicknames
+  (`Vendor` and `saschapo_lib`), so both need an entry pointing at that one file.
 - **A vendor footprint can carry zero-length courtyard segments** (`start == end`).
   KiCad then reports the courtyard as both "self-intersecting" and "not a closed shape".
   L1's footprint had four of them; deleting the degenerate segments left a valid closed
@@ -190,7 +198,9 @@ Silkscreen is functional and matches the firmware's channel names:
 ## 6. Open items
 
 **Resolved:** mounting holes (4x M3 3.2 mm at 5 mm inset), silkscreen numbering,
-L1 courtyard, the stray GND ring, J1/J2 3D models, netclass patterns.
+L1 courtyard, the stray GND ring, J1/J2 3D models, netclass patterns, and the custom
+libraries — now self-contained in `custom_pcb/libs/` and bound by project-level
+library tables, so a fresh clone resolves every symbol and footprint.
 
 **Devboard reserve: dropped.** A 26 x 52 mm rectangle does not fit on 80 x 65 alongside
 the components. Rev A uses flying leads and the devboard sits beside the board, so the
