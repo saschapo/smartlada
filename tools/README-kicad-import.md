@@ -67,7 +67,34 @@ alias kimport='python3 "$HOME/Documents/Claude/Projects/VAZ smart light/tools/ki
 5. Merges symbols into `Vendor.kicad_sym` and rewrites each symbol's `Footprint`
    property to `Vendor:<footprint>` so placing the symbol pulls the right
    footprint automatically.
-6. Skips parts that already exist unless `--force` is given.
+6. **Binds 3D models to footprints.** Many SnapEDA/UL packages ship the `.step`
+   next to a `.kicad_mod` that has *no* `(model …)` block, so the model would
+   otherwise sit in the store unused. After importing, the script attaches each
+   stored model to the best name-matching footprint that lacks one (e.g.
+   `ESP32-C6-WROOM-1-N8.step` -> `XCVR_ESP32-C6-WROOM-1-N8`). Footprints that
+   already carry a model reference are left untouched.
+7. Skips parts that already exist unless `--force` is given.
+
+### Loose `.step` files
+
+You can also drop a standalone `.step`/`.stp`/`.wrl` straight into the watch
+folder (some vendors offer the 3D model as a separate download). `--watch`
+copies it into the store, strips SnapEDA's `--3DModel-STEP-<id>` filename noise,
+and binds it to the matching footprint. If no footprint matches yet (the model
+arrived before its footprint), the file is kept in the store and bound later,
+automatically, once the footprint is imported.
+
+### Re-binding without re-importing
+
+```sh
+python3 tools/kicad_import.py --relink        # attach stored models to footprints
+python3 tools/kicad_import.py --relink --force # also repoint footprints that already have one
+```
+
+Model transforms default to offset/scale/rotate `0/1/0`, which is how these
+vendor parts are authored. If a model sits off-center or wrong-way-up, nudge it
+in the footprint editor's 3D tab — that's per-part and the script won't overwrite
+a footprint that already has a model block.
 
 ## Limits worth knowing
 

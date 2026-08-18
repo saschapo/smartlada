@@ -1,0 +1,23 @@
+G04 #@! TF.GenerationSoftware,KiCad,Pcbnew,10.0.4*
+G04 #@! TF.CreationDate,2026-07-30T11:54:06+03:00*
+G04 #@! TF.ProjectId,smartlada_revB,736d6172-746c-4616-9461-5f726576422e,rev?*
+G04 #@! TF.SameCoordinates,PX33365a0PY8917370*
+G04 #@! TF.FileFunction,Profile,NP*
+%FSLAX46Y46*%
+G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
+G04 Created by KiCad (PCBNEW 10.0.4) date 2026-07-30 11:54:06*
+%MOMM*%
+%LPD*%
+G01*
+G04 APERTURE LIST*
+G04 #@! TA.AperFunction,Profile*
+%ADD10C,0.050000*%
+G04 #@! TD*
+G04 APERTURE END LIST*
+D10*
+X-500000Y79500000D02*
+X91500000Y79500000D01*
+X91500000Y-500000D01*
+X-500000Y-500000D01*
+X-500000Y79500000D01*
+M02*

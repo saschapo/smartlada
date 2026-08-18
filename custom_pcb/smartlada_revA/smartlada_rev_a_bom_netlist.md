@@ -89,7 +89,7 @@ Passives 0805 unless noted, X7R or better, 1% on the feedback divider.
 
 | Ref | Qty | Value / PN | Package | Notes |
 |-----|-----|------------|---------|-------|
-| J1 | 1 | screw terminal 2-pos, 5.08 mm | THT | 12 V IN |
+| J1 | 1 | screw terminal 2-pos, 5.0 mm | THT | 12 V IN. Footprint MaiXu MX126-5.0; DG127-5.0 fitted |
 | F1 | 1 | T4A slow-blow 5x20 mm + clips | THT | slow-blow is mandatory: cold-filament inrush ~8-10 A per lamp |
 | Q5 | 1 | **AOD4185** | TO-252 (DPAK) | P-channel reverse-polarity FET in the +12 V line |
 | R1 | 1 | 100 k | 0805 | Q5 gate pull-down to GND |
@@ -141,7 +141,7 @@ not for a 0.83 A load. A single die also halves Qg, so switching loss at 30 kHz 
 
 | Ref | Qty | Value | Notes |
 |-----|-----|-------|-------|
-| J2 | 1 | screw terminal 5-pos, 5.08 mm | COM +12 V, CH0-, CH1-, CH2-, CH3- |
+| J2 | 1 | screw terminal 5-pos, 2.54 mm | COM +12 V, CH0-, CH1-, CH2-, CH3-. Footprint Phoenix MPT-0,5-5-2.54; DG308-2.54 fitted (6 A UL / 8 A IEC, use 0.75-1.0 mm2 on COM) |
 | J3 | 1 | male header 2.54 mm, 8-pin single row | **MCU interface — flying leads to the devboard.** See section 4 |
 | H1..H4 | 4 | M3 mounting hole, 3.2 mm | corners, 5 mm inset from the edges |
 **J4 (I2C service header) is not fitted in Rev A.** It was the only consumer of the
@@ -388,7 +388,7 @@ No flyback diode: incandescent lamps are resistive.
 
 ## 6a. As built
 
-Board **80 x 65 mm**, 2 layers, 1 oz, 1.6 mm. ERC 0/0, DRC 0 violations / 0 unconnected /
+Board **80 x 65 mm**, 2 layers, 1 oz, 1.5 mm. ERC 0/0, DRC 0 violations / 0 unconnected /
 0 footprint errors. All signals on F.Cu (323.5 mm); B.Cu carries only a 5.3 mm feedback
 ground link, leaving the GND pour as one uninterrupted island covering 93% of the board.
 8 vias, all GND. Silkscreen is functional and 0-based, matching the firmware:

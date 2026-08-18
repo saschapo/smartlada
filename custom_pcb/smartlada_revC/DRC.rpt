@@ -1,0 +1,28 @@
+** Drc report for smartlada_revC.kicad_pcb **
+** Created on 2026-08-15T23:53:07 **
+** Report includes: Errors, Warnings, Exclusions **
+
+** Found 2 DRC violations **
+[lib_footprint_mismatch]: Footprint 'XCVR_ESP32-C6-WROOM-1-N16' does not match copy in library 'Vendor'
+    Local override; warning
+    @(223.7600 mm, 104.5500 mm): Footprint U1
+[lib_footprint_mismatch]: Footprint 'SSOP-10-1EP_3.9x4.9mm_P1mm_EP2.1x3.3mm_ThermalVias' does not match copy in library 'Package_SO'
+    Local override; warning
+    @(167.0000 mm, 90.6350 mm): Footprint U3
+
+** Found 0 unconnected pads **
+
+** Found 0 Footprint errors **
+
+** Ignored checks **
+    - Footprint has no courtyard defined
+    - Track endpoint not centered on via
+    - Tuning profile track geometries
+    - Footprint field does not match symbol field
+    - Footprint doesn't match symbol's footprint filters
+    - Silkscreen clearance
+    - Silkscreen clipped by solder mask
+    - Silkscreen clipped by board edge
+    - Footprint component type doesn't match footprint pads
+
+** End of Report **

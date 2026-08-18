@@ -1,0 +1,27 @@
+Designator,Comment,Footprint,MPN,Manufacturer,Qty/board,Side,Populate,LCSC,Note
+C1;C10,1uF X7R,0805,CC0805KFX7R8BB105,Yageo,2,Top,Yes,,
+C2;C5;C9,100nF 50V X7R,0805,TCC0805X7R104K500DT,,3,Top,Yes,,match by MPN
+C3;C4,10uF 25V X7R,1210,CL32B106KAJNNNE,Samsung,2,Top,Yes,,
+C6;C7;C8,22uF 16V X7R,1210,HLC1210X7R226K160N,,3,Top,Yes,,match by MPN
+C11,470uF 25V,SMD Alu 10x10.2mm,EEEHA1E471P,Panasonic,1,Top,Yes,,POLARIZED (+ mark)
+D1;D2;D3;D4;D5;D6,LED red,LED 0805,,,6,Top,Yes,,POLARIZED (cathode); any 0805 red
+J1,USB-C receptacle 16P,USB-C THT,TYPE-C-31-M-12,HRO,1,Top,Yes,,THROUGH-HOLE
+J2;J3;J5;J6;J7,Faston tab 6.3mm,Faston THT,63951-1,TE,5,Top,Yes,,THROUGH-HOLE (OUT0-3 + common +12V)
+J4,Pin header 1x8 right-angle,2.54mm 1x8 THT,,,1,Top,Yes,,THROUGH-HOLE; generic; cut from strip
+J8,Pin header 1x3 right-angle,2.54mm 1x3 THT,,,1,Top,Yes,,THROUGH-HOLE; generic
+L1,10uH inductor,SMD 7x7mm,CDRH6D28NP-100NC,Sumida,1,Top,Yes,,
+Q1;Q2;Q3;Q4,AOD4184A N-MOSFET,TO-252/DPAK,AOD4184A,AOS,4,Top,Yes,,orient pin1
+R1;R12,1k,0805,RC0805FR-071KL,Yageo,2,Top,Yes,,
+R2;R6;R9;R10;R11,10k,0805,ERJ6ENF1002V,Panasonic,5,Top,Yes,,
+R3,24k 1%,0805,RC0805FR-0724KL,Yageo,1,Top,Yes,,
+R4,22k 1%,0805,ERJ6ENF2202V,Panasonic,1,Top,Yes,,
+R5;R7;Rpd1;Rpd2;Rpd3;Rpd4,100k 1%,0805,ERJP06F1003V,Panasonic,6,Top,Yes,,
+R8,33k,0805,RC0805JR-0733KL,Yageo,1,Top,Yes,,
+R13;R14;R15;R16;R17,4.7k,0805,ERJ6ENF4701V,Panasonic,5,Top,Yes,,
+Rg1;Rg2;Rg3;Rg4,100R,0805,RT0805BRD07100RL,Yageo,4,Top,Yes,,gate resistor
+SW1;SW2,Tactile switch 6x6,6x6 SMD,B3FS1010P,Omron,2,Top,Yes,,
+TP1;TP2;TP3;TP4,Test point (bare pad),THT pad,,,4,Top,DNP,,DO NOT POPULATE
+U1,ESP32-C6-WROOM-1-N16,WROOM module,ESP32-C6-WROOM-1-N16,Espressif,1,Top,Yes,,customer can supply (have 5); pin1
+U2,TPS54202 buck,SOT-23-6,TPS54202DDCR,TI,1,Top,Yes,,orient pin1
+U3,CH224K PD trigger,SSOP-10 w/ EP,CH224K,WCH,1,Top,Yes,,thermal pad EP; pin1
+U4,USBLC6-2SC6 ESD,SOT-23-6,USBLC6-2SC6,ST,1,Top,Yes,,orient pin1

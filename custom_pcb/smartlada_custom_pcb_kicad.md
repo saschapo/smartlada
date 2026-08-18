@@ -8,7 +8,7 @@
 >
 > Актуальные документы:
 > - **[KICAD_WORKFLOW.md](KICAD_WORKFLOW.md)** — точка входа: состояние, что дальше
-> - [smartlada_rev_a_bom_netlist.md](smartlada_rev_a_bom_netlist.md) — спецификация Rev A
+> - [smartlada_rev_a_bom_netlist.md](smartlada_revA/smartlada_rev_a_bom_netlist.md) — спецификация Rev A
 >
 > Этот файл сохранён ради раздела 8 (замысел ревизий A/B/C) и списка того, что
 > сознательно не делается.

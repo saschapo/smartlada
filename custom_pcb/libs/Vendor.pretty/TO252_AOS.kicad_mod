@@ -498,6 +498,7 @@
 		(layers "F.Cu" "F.Mask" "F.Paste")
 		(uuid "48e7ecb6-e3a2-4a5c-9b1c-1293c57741f8")
 	)
+	(embedded_fonts no)
 	(model "${KICAD10_3DMODEL_DIR}/Package_TO_SOT_SMD.3dshapes/TO-252-3_TabPin2.step"
 		(offset
 			(xyz 0 0 0)
@@ -509,5 +510,4 @@
 			(xyz 0 0 -90)
 		)
 	)
-	(embedded_fonts no)
 )

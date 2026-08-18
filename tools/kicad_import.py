@@ -282,28 +282,136 @@ def import_footprints(fp_paths, models_copied, force):
 MODEL_RE = re.compile(r'(\(\s*model\s+)("?)([^")\s]+)\2')
 
 
-def rewrite_models(text, models_copied):
-    known = {Path(m).name.lower(): Path(m).name for m in models_copied}
+def rewrite_models(text, name_map):
+    """Repoint any (model ...) paths already present to our shared store."""
+    lower = {k.lower(): v for k, v in name_map.items()}
 
     def sub(m):
         base = Path(m.group(3)).name
-        real = known.get(base.lower(), base)
+        real = lower.get(base.lower(), base)
         return f'{m.group(1)}"${{{ENV_VAR_3D}}}/{real}"'
 
     return MODEL_RE.sub(sub, text)
 
 
+def clean_model_filename(path):
+    """Drop SnapEDA export noise ("<part>--3DModel-STEP-<id>") from a model name."""
+    stem = re.split(r'--?\s*3d[\s_-]*model', path.stem, flags=re.I)[0].strip("-_ ")
+    return (stem or path.stem) + path.suffix.lower()
+
+
 def import_models(model_paths, force):
-    copied = []
+    """Copy models into the shared store; return {original_name: stored_name}."""
+    name_map = {}
     for src in model_paths:
-        dest = MODEL_DIR / src.name
+        stored = clean_model_filename(src)
+        dest = MODEL_DIR / stored
         if dest.exists() and not force:
-            log(f"  3D model exists, skipped: {src.name}")
+            log(f"  3D model exists, skipped: {stored}")
         else:
             shutil.copy2(src, dest)
-            log(f"  3D model: {src.name}")
-        copied.append(src.name)
-    return copied
+            log(f"  3D model: {stored}")
+        name_map[src.name] = stored
+    return name_map
+
+
+# --------------------------------------------------------------------------
+# binding 3D models to footprints by name
+# --------------------------------------------------------------------------
+
+# Common UltraLibrarian / SnapEDA footprint name prefixes (a functional group
+# tag the part number is appended to, e.g. XCVR_ESP32-C6-WROOM-1-N8).
+FP_PREFIXES = ("XCVR", "OST", "SW4", "SW", "CAP", "IND", "RES", "LED",
+               "CONN", "DIO", "REL", "FID", "MOD", "CRY", "OSC", "FB")
+MATCH_THRESHOLD = 0.6
+
+
+def _norm(s):
+    s = re.sub(r'--?\s*3d[\s_-]*model.*$', '', s, flags=re.I)
+    s = s.lower()
+    for junk in ("3dmodel", "model", "step", "stp", "wrl"):
+        s = s.replace(junk, "")
+    return re.sub(r'[^a-z0-9]', '', s)
+
+
+def _fp_core(name):
+    for p in FP_PREFIXES:
+        if name.upper().startswith(p + "_"):
+            return _norm(name[len(p) + 1:])
+    return _norm(name)
+
+
+def match_score(model_stem, fp_name):
+    """0..1 similarity between a model file name and a footprint name."""
+    from difflib import SequenceMatcher
+    a, b = _norm(model_stem), _fp_core(fp_name)
+    if not a or not b:
+        return 0.0
+    lcs = SequenceMatcher(None, a, b).find_longest_match(0, len(a), 0, len(b)).size
+    if lcs < 5:                       # too short to trust (avoid coincidental hits)
+        return 0.0
+    return lcs / min(len(a), len(b))
+
+
+def has_model_block(text):
+    return MODEL_RE.search(text) is not None
+
+
+def add_model_block(text, stored_name):
+    """Insert a (model ...) block referencing our store before the final ')'."""
+    block = (f'  (model "${{{ENV_VAR_3D}}}/{stored_name}"\n'
+             f'    (offset (xyz 0 0 0))\n'
+             f'    (scale (xyz 1 1 1))\n'
+             f'    (rotate (xyz 0 0 0))\n'
+             f'  )\n')
+    idx = text.rstrip().rfind(")")
+    return text[:idx] + block + text[idx:]
+
+
+def relink_models(force=False):
+    """Attach every stored 3D model to the best-matching footprint that lacks one.
+
+    Idempotent: footprints that already carry a (model ...) block are left alone
+    unless force is set."""
+    if not MODEL_DIR.exists():
+        return
+    models = [p.name for p in sorted(MODEL_DIR.iterdir())
+              if p.suffix.lower() in MODEL_EXT]
+    if not models:
+        return
+    bound = 0
+    for fp in sorted(FP_DIR.glob("*.kicad_mod")):
+        text = fp.read_text()
+        if has_model_block(text) and not force:
+            continue
+        best = max(models, key=lambda m: match_score(Path(m).stem, fp.stem))
+        s = match_score(Path(best).stem, fp.stem)
+        if s < MATCH_THRESHOLD:
+            continue
+        if has_model_block(text):     # force: repoint the existing block instead
+            text = rewrite_models(text, {best: best})
+            text = MODEL_RE.sub(
+                lambda m, b=best: f'{m.group(1)}"${{{ENV_VAR_3D}}}/{b}"', text, count=1)
+        else:
+            text = add_model_block(text, best)
+        fp.write_text(text)
+        bound += 1
+        log(f"  bound 3D model: {fp.stem} <- {best}  (match {s:.2f})")
+    if bound:
+        log(f"attached {bound} 3D model(s) to footprints")
+    return bound
+
+
+def import_loose_models(model_paths, force):
+    """Copy standalone .step files dropped in the watch folder into the store."""
+    for src in model_paths:
+        stored = clean_model_filename(src)
+        dest = MODEL_DIR / stored
+        if dest.exists() and not force:
+            log(f"  3D model exists, skipped: {stored}")
+        else:
+            shutil.copy2(src, dest)
+            log(f"  3D model: {stored}")
 
 
 def import_symbols(sym_paths, fp_names, force):
@@ -380,9 +488,12 @@ def do_import(src, force, run_setup=True):
 
         syms = upgrade(syms, "sym", work)
 
-        copied_models = import_models(models, force)
-        fp_names = import_footprints(fps, copied_models, force)
+        name_map = import_models(models, force)
+        fp_names = import_footprints(fps, name_map, force)
         import_symbols(syms, fp_names, force)
+
+    # bind shipped models to footprints that arrive without a (model ...) block
+    relink_models(force)
 
     # normalize both libraries to the current KiCad format
     upgrade_in_place("fp", FP_DIR)
@@ -393,16 +504,18 @@ def do_import(src, force, run_setup=True):
 
 
 def watch_candidates():
-    """Packages sitting in the watch folder that have not been imported yet."""
-    out = []
+    """New items in the watch folder: (packages, loose 3D model files)."""
+    pkgs, loose = [], []
     for p in sorted(WATCH_DIR.iterdir()):
         if p.name.startswith(".") or p.name in (DONE_DIR_NAME, FAILED_DIR_NAME):
             continue
         if p.suffix.lower() in (".crdownload", ".part", ".download"):
             continue  # still downloading
         if p.is_dir() or p.suffix.lower() == ".zip":
-            out.append(p)
-    return out
+            pkgs.append(p)
+        elif p.suffix.lower() in MODEL_EXT:
+            loose.append(p)
+    return pkgs, loose
 
 
 def move_aside(pkg, sub):
@@ -420,8 +533,8 @@ def move_aside(pkg, sub):
 def do_watch(force):
     WATCH_DIR.mkdir(parents=True, exist_ok=True)
     setup()
-    pkgs = watch_candidates()
-    if not pkgs:
+    pkgs, loose = watch_candidates()
+    if not pkgs and not loose:
         log(f"nothing new in {WATCH_DIR}")
         return 0
 
@@ -445,9 +558,23 @@ def do_watch(force):
             move_aside(pkg, FAILED_DIR_NAME)
             failed += 1
 
+    if loose:
+        log("")
+        log(f"importing {len(loose)} loose 3D model file(s)")
+        import_loose_models(loose, force)
+        for m in loose:
+            move_aside(m, DONE_DIR_NAME)
+        ok += len(loose)
+
+    # bind any unattached models to matching footprints (covers loose files and
+    # earlier imports whose vendor footprint shipped without a model block)
     log("")
-    log(f"watch folder: {ok} imported, {failed} failed")
-    log(f"imported packages moved to {WATCH_DIR / DONE_DIR_NAME}")
+    relink_models(force)
+    upgrade_in_place("fp", FP_DIR)
+
+    log("")
+    log(f"watch folder: {ok} item(s) imported, {failed} failed")
+    log(f"imported items moved to {WATCH_DIR / DONE_DIR_NAME}")
     return 1 if failed else 0
 
 
@@ -475,6 +602,8 @@ def main():
                     help=f"import every new package in {WATCH_DIR}")
     ap.add_argument("--setup", action="store_true", help="only create and register the library")
     ap.add_argument("--list", action="store_true", help="list library contents")
+    ap.add_argument("--relink", action="store_true",
+                    help="(re)attach stored 3D models to matching footprints")
     ap.add_argument("--force", action="store_true", help="overwrite parts that already exist")
     ap.add_argument("--allow-running", action="store_true",
                     help="import even if KiCad is open (library tables may be overwritten)")
@@ -496,6 +625,14 @@ def main():
 
     if args.setup:
         setup()
+        return 0
+
+    if args.relink:
+        setup()
+        n = relink_models(args.force)
+        if not n:
+            log("no footprints needed a 3D model attached")
+        upgrade_in_place("fp", FP_DIR)
         return 0
 
     if args.watch:

@@ -1,0 +1,27 @@
+Ref,FormFactor,Value,Footprint,Qty_1bd,Qty_5bd_margin,Tolerance,Platan,Note
+Rg1-Rg4,0805,100R,R_0805_2012Metric_HandSolder,4,30,1%,2017101911,gate resistors (RT0805BRD07100RL)
+R1;R12,0805,1k,R_0805_2012Metric_HandSolder,2,20,5%,2014969775,R1=CH224 VDD / R12=3V3 LED
+R13-R17,0805,4k7,R_0805_2012Metric_HandSolder,5,30,5%,2011352451,LED indicator series
+R2;R6;R9;R10;R11,0805,10k,R_0805_2012Metric_HandSolder,5,30,1%,2017347591,pull-ups (ERJ6ENF1002V 1%)
+R4,0805,22k,R_0805_2012Metric_HandSolder,1,15,5%,2014983933,buck FB bottom - part is 5% (RC0805JR); consider 1% for tighter Vout
+R3,0805,24k,R_0805_2012Metric_HandSolder,1,15,1%,2014969370,CH224 CFG1 (PD 12V select) - verify 1%
+R8,0805,33k,R_0805_2012Metric_HandSolder,1,15,1%,2014967654,VBUS-sense bottom
+R5;R7;Rpd1-Rpd4,0805,100k,R_0805_2012Metric_HandSolder,6,40,1%,2011428029,R5/R7 dividers 1% + Rpd pulldown (ERJP06F1003V 1%)
+C2;C5;C9,0805,100nF,C_0805_2012Metric_HandSolder,3,30,10%,2014826976,X7R decoupling >=16V (TCC0603X7R104K250CT)
+C1;C10,0805,1uF,C_0805_2012Metric_HandSolder,2,20,10%,579760124,X7R >=16V (TCC0603X7R105K250CT)
+C3;C4,1210,10uF,C_1210_3225Metric_HandSolder,2,20,10%,2014974049,X7R BUCK INPUT 12V -> 50V part OK (GRM32ER71H106KA12L)
+C6;C7;C8,1210,22uF,C_1210_3225Metric_HandSolder,3,30,10-20%,2015696919,X5R 3V3 out 25V (GRT21BR61E226ME13L)
+C11,e-cap 10x10.5,470uF,CP_Elec_10x10.5,1,8,20%,696157719,12V BULK >=25V low-ESR
+D1-D6,0805,LED red,LED_0805_2012Metric_HandSolder,6,40,-,Ali:LED0805red,red indicators (Ali not Platan)
+Q1-Q4,DPAK/TO252,AOD4184A,TO252_AOS,4,25,-,2010030452,N-MOSFET low-side
+U1,module,ESP32-C6-WROOM-1-N16,XCVR_ESP32-C6-WROOM-1-N16,1,5+2,-,own,ALREADY HAVE 5 pcs; +2 spare
+U2,SOT-23-6,TPS54202DDCR,SOT-23-6_Handsoldering,1,7,-,2015708243,buck 12->3.3V
+U3,SSOP-10-EP,CH224K,SSOP-10-1EP_ThermalVias,1,7,-,2016569523,PD 12V trigger
+U4,SOT-23-6,USBLC6-2SC6,SOT-23-6_Handsoldering,1,7,-,2015971466,USB ESD
+L1,7x7 SMD,10uH,IND_CDRH6D28NP-100NC_SUM,1,7,20%,2014962957,Isat >=3A (CDRH6D28NP-100NC)
+J1,USB-C 16P THT,USB-C receptacle,USB_C_Receptacle_HRO_TYPE-C-31-M-12,1,7,-,2015452755,found this session (schematic field said Ali)
+J2;J3;J5;J6;J7,Faston 6.3 THT,tab male,TE_1217754-1,5,30,-,2011346771,OUT0-3 + common +12V; crimp female separate
+J4,header 1x08 2.54 horiz,-,PinHeader_1x08_P2.54mm_Horizontal,1,5,-,PBS-40,cut from 1x40 strip; OLED cable BLS-8 Platan 10660
+J8,header 1x03 2.54 horiz,-,PinHeader_1x03_P2.54mm_Horizontal,1,5,-,PBS-40,UART; same 1x40 strip
+SW1;SW2,6x6 SMD btn,tactile,SW_SPST_Omron_B3FS-100xP,2,12,-,2015452241,found this session (pricey >=31); any 6x6 SMD equiv
+TP1-TP4,TP THT D2/1mm,testpoint,TestPoint_THTPad_D2.0mm_Drill1.0mm,4,0,-,-,not purchased - wire loop / bare pad

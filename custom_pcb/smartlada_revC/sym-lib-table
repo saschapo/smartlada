@@ -1,0 +1,5 @@
+(sym_lib_table
+	(version 7)
+	(lib (name "Vendor")(type "KiCad")(uri "${KIPRJMOD}/../libs/Vendor.kicad_sym")(options "")(descr "Project-local vendor symbols (UltraLibrarian / SnapEDA imports)"))
+	(lib (name "saschapo_lib")(type "KiCad")(uri "${KIPRJMOD}/../libs/Vendor.kicad_sym")(options "")(descr "Same file as Vendor: schematic references AOD4184A, AOD4185, CDRH6D28NP-100NC, UMK325BJ106KM-P, USB-B1HSB6 under this nickname"))
+)

@@ -1,7 +1,7 @@
 # SmartLada Rev A — KiCad workflow, rules and lessons
 
 Working notes for the carrier board. Companion to
-[smartlada_rev_a_bom_netlist.md](smartlada_rev_a_bom_netlist.md), which holds the
+[smartlada_rev_a_bom_netlist.md](smartlada_revA/smartlada_rev_a_bom_netlist.md), which holds the
 electrical spec. This file holds **process**: the order of work, the rules that decided
 the design, and the mistakes that were caught along the way.
 
@@ -10,7 +10,7 @@ the design, and the mistakes that were caught along the way.
 
 **Start here in a new session:** read section 5 for the current numbers, section 6 for
 what is still open, section 7 for the next actions. The electrical spec lives in
-[smartlada_rev_a_bom_netlist.md](smartlada_rev_a_bom_netlist.md); this file is process
+[smartlada_rev_a_bom_netlist.md](smartlada_revA/smartlada_rev_a_bom_netlist.md); this file is process
 and state.
 
 ---
@@ -165,7 +165,7 @@ pushing back rather than accepting the analysis.
 
 ## 5. Current numbers
 
-Board **80 x 65 mm**, 2 layers, 1 oz, 1.6 mm. 30 components + 4 M3 mounting holes.
+Board **80 x 65 mm**, 2 layers, 1 oz, 1.5 mm. 30 components + 4 M3 mounting holes.
 
 | Net class | Nets | Track | Via |
 |---|---|---|---|
