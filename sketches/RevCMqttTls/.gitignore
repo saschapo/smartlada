@@ -1,0 +1,2 @@
+# real secrets (Wi-Fi creds + client private key) -- never commit
+secrets.h

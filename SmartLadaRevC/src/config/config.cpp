@@ -3,7 +3,7 @@
 
 namespace config {
 
-static constexpr uint8_t MAGIC = 0x56;
+static constexpr uint8_t MAGIC = 0x57;   // bump on struct/layout change -> reload defaults
 Settings s;
 
 static const Settings DEFAULTS = {
@@ -19,6 +19,8 @@ static const Settings DEFAULTS = {
   1,                          // min level 1 %
   100,                        // max level 100 %
   20000,                      // PWM 20 kHz
+  0x0F,                       // lampOn: all 4 channels enabled
+  1,                          // faraOn: master device on (local control works out of the box)
 };
 
 void load() {

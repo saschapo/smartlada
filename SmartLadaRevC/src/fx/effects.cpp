@@ -83,31 +83,36 @@ static float    s_phase = 0.0f;
 static uint32_t s_lastMs = 0;
 static uint8_t  s_lastMode = 255;
 
-void compute(uint8_t mode, uint32_t now, uint8_t master,
-             const uint8_t staticBri[4], uint8_t out[4]) {
+void compute(uint8_t mode, uint32_t now, uint8_t master, bool faraOn,
+             uint8_t lampOn, const uint8_t staticBri[4], uint8_t out[4]) {
   uint32_t dt = now - s_lastMs;
-  s_lastMs = now;
+  s_lastMs = now;                                    // advance clock even when off (no jump on resume)
   if (mode != s_lastMode) { s_phase = 0.0f; s_lastMode = mode; }
 
-  if (mode == 0) {
-    for (uint8_t i = 0; i < 4; i++) out[i] = (uint8_t)((int)staticBri[i] * master / 255);
+  // Effect only when the Fara master device is on AND an animation mode is selected.
+  if (faraOn && mode != 0 && mode <= COUNT) {
+    const Effect* e = &EFFECTS[mode - 1];
+    uint32_t cyc = e->cycle(e);
+    if (cyc > 0) {
+      s_phase += (float)dt / (float)cyc;
+      s_phase -= floorf(s_phase);                  // wrap to [0,1)
+    }
+    e->render(s_phase, e, master, out);            // effect spans all 4 channels * master
     return;
   }
-  if (mode > COUNT) { for (uint8_t i = 0; i < 4; i++) out[i] = 0; return; }
 
-  const Effect* e = &EFFECTS[mode - 1];
-  uint32_t cyc = e->cycle(e);
-  if (cyc > 0) {
-    s_phase += (float)dt / (float)cyc;
-    s_phase -= floorf(s_phase);                    // wrap to [0,1)
-  }
-  e->render(s_phase, e, master, out);
+  // Static (Fara on) or passthrough (Fara off): per-channel staticBri gated by lampOn.
+  // Fara off -> no master scaling, lamps run at their own EP levels (independent control).
+  uint16_t m = faraOn ? master : 255;
+  for (uint8_t i = 0; i < 4; i++)
+    out[i] = (lampOn & (1 << i)) ? (uint8_t)((int)staticBri[i] * m / 255) : 0;
 }
 
 const char* modeName(uint8_t mode) { return (mode == 0) ? "Static" : EFFECTS[mode - 1].name; }
 uint8_t     modeCount()            { return 1 + COUNT; }
 
 // ---- persistence ----
+static constexpr uint8_t MAX_FX_PARAMS = 32;   // NVS blob cap; guards the stack buffers below
 static uint8_t totalParams() {
   uint8_t n = 0;
   for (uint8_t e = 0; e < COUNT; e++) n += EFFECTS[e].nparams;
@@ -124,8 +129,8 @@ void loadParams() {
   pr.begin("smartlada", true);
   uint8_t n = totalParams();
   size_t bytes = (size_t)n * sizeof(int32_t);
-  if (pr.getBytesLength("fxparams") == bytes) {
-    int32_t buf[32];
+  if (n <= MAX_FX_PARAMS && pr.getBytesLength("fxparams") == bytes) {
+    int32_t buf[MAX_FX_PARAMS];
     pr.getBytes("fxparams", buf, bytes);
     uint8_t k = 0;
     for (uint8_t e = 0; e < COUNT; e++)
@@ -136,9 +141,10 @@ void loadParams() {
 }
 
 void saveParams() {
+  if (totalParams() > MAX_FX_PARAMS) return;   // grew past the blob cap; bump MAX_FX_PARAMS
   Preferences pr;
   pr.begin("smartlada", false);
-  int32_t buf[32];
+  int32_t buf[MAX_FX_PARAMS];
   uint8_t k = 0;
   for (uint8_t e = 0; e < COUNT; e++)
     for (uint8_t i = 0; i < EFFECTS[e].nparams; i++)

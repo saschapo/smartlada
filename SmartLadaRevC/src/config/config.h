@@ -19,6 +19,8 @@ struct Settings {
   uint8_t  minLvl;        // output floor %, 0..50 (so LEDs light at low input)
   uint8_t  maxLvl;        // output ceiling %, 50..100
   uint16_t pwmFreq;       // PWM frequency Hz, 100..30000
+  uint8_t  lampOn;        // per-channel on/off bitmask (bit i = channel i); Zigbee EP10-13 on/off
+  uint8_t  faraOn;        // Fara master device on/off (Zigbee EP14); 0 = whole output off
 };
 
 extern Settings s;

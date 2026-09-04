@@ -34,10 +34,13 @@ struct Effect {
 extern Effect        EFFECTS[];
 extern const uint8_t COUNT;                        // animation effects (excludes Static)
 
-// Compute the 4 channel outputs for a UI mode. Static -> per-channel * master.
-// Animation modes advance the internal phase integrator.
-void compute(uint8_t mode, uint32_t now, uint8_t master,
-             const uint8_t staticBri[4], uint8_t out[4]);
+// Compute the 4 channel outputs (the compositor):
+//   Fara on  + animation mode -> effect frame * master, across all 4 channels
+//   Fara on  + static (mode 0) -> per-channel staticBri * master, gated by lampOn
+//   Fara off (passthrough)      -> per-channel staticBri, no master, gated by lampOn
+// (lampOn bit i enables channel i; the local menu keeps faraOn=1 so master always applies.)
+void compute(uint8_t mode, uint32_t now, uint8_t master, bool faraOn,
+             uint8_t lampOn, const uint8_t staticBri[4], uint8_t out[4]);
 
 const char* modeName(uint8_t mode);                // 0 = "Static"
 uint8_t     modeCount();                           // 1 (Static) + COUNT

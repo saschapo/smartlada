@@ -9,5 +9,6 @@ namespace menu {
 void begin();
 void update(uint32_t now);
 void render();
+void notifyExternalChange();   // force a redraw after Zigbee/network changed config::s
 
 }  // namespace menu

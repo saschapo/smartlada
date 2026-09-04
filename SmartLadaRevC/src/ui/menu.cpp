@@ -5,6 +5,7 @@
 #include "../channels/channels.h"
 #include "../fx/effects.h"
 #include "../input/buttons.h"
+#include "../net/zigbee.h"
 #include "../version.h"
 #include <Preferences.h>
 
@@ -19,7 +20,7 @@ static constexpr uint8_t NSCREEN = 12;
 static Screen  screen = SC_IDLE;
 static Screen  modeReturn = SC_MENU;     // where Mode returns to (set on entry)
 static int8_t  cursor = 0;
-static int8_t  cur[NSCREEN] = {0};
+static int8_t  screenCursor[NSCREEN] = {0};   // per-screen saved cursor (restored on return)
 static bool    editing = false;
 static bool    dirty = true;
 static bool    pendingSave = false;      // flush config NVS on release
@@ -355,8 +356,10 @@ void render() {
     case SC_IDLE:   renderIdle(); break;
     case SC_MENU:   carousel("MENU", MAIN_ITEMS, MAIN_N, cursor); break;
     case SC_MODE: {
-      static const char* names[1 + 8];
+      static constexpr uint8_t MODE_MAX = 1 + 8;    // Static + up to 8 effects
+      static const char* names[MODE_MAX];
       uint8_t n = fx::modeCount();
+      if (n > MODE_MAX) n = MODE_MAX;
       for (uint8_t i = 0; i < n; i++) names[i] = fx::modeName(i);
       carousel("MODE", names, n, cursor);
       break;
@@ -393,9 +396,9 @@ static void updatePower(uint32_t now) {
 
 // ---------- navigation ----------
 static void go(Screen s) {
-  cur[screen] = cursor;
+  screenCursor[screen] = cursor;
   screen = s;
-  cursor = cur[s];
+  cursor = screenCursor[s];
   editing = false;
   animActive = false;
   if (s == SC_MODE) cursor = config::s.mode;
@@ -538,9 +541,11 @@ void update(uint32_t now) {
       if (up || down) { factorySel ^= 1; dirty = true; }
       if (back) go(SC_SETTINGS);
       if (ok) {
-        if (factorySel == 1) {                     // Yes -> wipe NVS + reboot
+        if (factorySel == 1) {                     // Yes -> wipe config + leave Zigbee, reboot
           Preferences pr; pr.begin("smartlada", false); pr.clear(); pr.end();
-          delay(50); ESP.restart();
+          delay(50);
+          zb::factoryReset();                      // erases Zigbee NVS + reboots
+          ESP.restart();                           // fallback if factoryReset() returned
         } else go(SC_SETTINGS);
       }
       break;
@@ -583,5 +588,7 @@ void update(uint32_t now) {
 }
 
 void begin() { screen = SC_IDLE; cursor = 0; dirty = true; lastAct = millis(); powerState = 0; }
+
+void notifyExternalChange() { dirty = true; }   // Zigbee/network wrote config::s -> redraw
 
 }  // namespace menu

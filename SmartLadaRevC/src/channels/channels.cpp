@@ -6,7 +6,10 @@ namespace channels {
 // Rev C routing (from PCB netlist): OUT0=GPIO1, OUT1=GPIO0, OUT2=GPIO2, OUT3=GPIO3.
 // Index i == physical Faston OUTi. OUT0/OUT1 are crossed vs Rev B ({0,1,2,3}).
 static const uint8_t PINS[N] = {1, 0, 2, 3};   // Rev C OUT0..OUT3
-static constexpr uint8_t  RES_BITS = 11;       // 2047 levels; supports up to ~39 kHz
+// LEDC on ESP32-C6 clocks from the 40 MHz source, so max freq = 40e6 / 2^RES_BITS.
+// 10-bit -> ceiling ~39 kHz, which covers the config range (up to 30 kHz) incl. the
+// 20 kHz default. (11-bit capped at ~19.5 kHz, below the 20 kHz default -> channels dead.)
+static constexpr uint8_t  RES_BITS = 10;       // 1023 levels; supports up to ~39 kHz
 static constexpr uint16_t DUTY_MAX = (1 << RES_BITS) - 1;
 
 static uint16_t s_lut[256];                    // input 0..255 -> duty 0..DUTY_MAX
