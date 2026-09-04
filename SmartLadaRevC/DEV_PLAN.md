@@ -103,4 +103,4 @@ Fara.on && насыщенный цвет  -> out[i] = кадр_эффекта[i]
 - Готовый Zigbee-код: `sketches/RevCZigbeeFx/RevCZigbeeFx.ino` (+ `RevCZigbee4EP` — 4 лампы, вариант A).
 - Веб/NVS/лог: cineink `/Users/saschapo/Documents/Documents/arduino/260518_cineink/cineink/`
   (`web_view/`, `firmware/cineink/{web,log,rtc}.cpp`).
-- Pin-map ground truth: `CODE_HANDOFF.md`.
+- Pin-map ground truth: `README.md`.
