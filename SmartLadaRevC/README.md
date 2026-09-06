@@ -23,11 +23,19 @@ Forked from `../SmartLadaRevB`; the `src/` layers are reused, plus a Zigbee laye
   - `EP14` "Fara" (`ZigbeeColorDimmableLight`) — the **effect layer and nothing else**:
     **color = effect selector**, **level = effect brightness**; **off and white both mean
     "no effect"**. EP14 never touches per-lamp levels.
-- **Wi-Fi + web UI** (off by default, switched on in Settings -> WiFi): joins a saved network,
-  or hosts a `SmartLada-XXXX` provisioning AP with a join QR on the OLED. Reachable at
-  `http://smartlada.local` in either mode; the page is served from flash, so a BLE OTA carries
-  it along and there is no filesystem image to upload. The browser is just another writer of
-  the same state as the menu and Zigbee.
+- **Radio is a choice, not a pair.** The C6 has one 2.4 GHz radio. The libraries are built
+  with software coexistence and both stacks do link together, but in practice a phone could
+  not join the access point while the Zigbee stack was up. So exactly one protocol owns the
+  band per boot, the choice is persisted, and switching reboots (Settings -> WiFi or
+  Settings -> Zigbee on the device; one-way from the web page).
+- **Wi-Fi + web UI** (Zigbee is the default): access-point first, because a car has no network
+  to join -- the lamp hosts `fara_NNNN` (password `smartlada`, both editable from the page),
+  with a join QR on the OLED that swaps to the address QR once a phone has associated. Station
+  credentials are still honoured if stored, for bench use. The page is served from flash, so a
+  firmware update carries it along and there is no filesystem image to upload. The browser is
+  just another writer of the same state as the menu and Zigbee, and mirrors every setting.
+- **Event log on flash** (`/log`, `/log.1`, `/clearlog`) and **firmware upload over Wi-Fi**
+  (`POST /firmware`), so a bench session needs neither a cable nor a serial monitor.
 - Settings + effect timings persisted in NVS, and **restored on power-on**: any change —
   local or remote — is written once it has stopped moving for 4 s.
 
@@ -61,9 +69,12 @@ The `mode` alone picks the layer; EP14 (Fara) is the effect layer, EP10-13 (lamp
 static picture:
 
 - **Effect (mode ≠ 0)** → animation frame × `master` (effect brightness), across all 4 channels.
-- **Static (mode 0)** → per-channel `staticBri`, gated by `lampOn` — **no master scaling**.
-  The static "master" is the group dimmer (and the local idle screen), which fans out into
-  `staticBri`, so it is applied once, not twice (no double-dimming).
+- **Static (mode 0)** → per-channel `staticBri`, gated by `lampOn`, then scaled by `master`.
+  The master is a **ceiling**, in the spirit of Lamp Setup's Max Level: at 100% nothing is held
+  back, and lowering it pulls the whole picture down while the lamps keep their relative
+  balance. It is the same master that sets effect brightness, so one fader means one thing in
+  both layers. Alice's group dimmer writes `staticBri`, so group and master do compound --
+  which is what a ceiling is for.
 - **EP14 (Fara)**: off **and** white → no effect (mode 0); color → effect (hue selects it).
   Its level is **always** the effect brightness and never fans out to `staticBri`. Fara never
   turns lamps off. A second group dimmer used to live here (white fanned its level out to
