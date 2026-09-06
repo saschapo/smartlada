@@ -53,5 +53,9 @@ void poll(uint32_t now) {
 bool     pressed(uint8_t i) { return b[i].edge; }
 bool     repeat(uint8_t i)  { return b[i].rep; }
 uint32_t heldMs(uint8_t i)  { return (b[i].stable == LOW) ? (millis() - b[i].pressStart) : 0; }
+// Raw (last-sampled) line level, before debounce settles. Unlike heldMs(), this reports a key
+// that is physically held at boot immediately -- used to require a real release before arming
+// an action (e.g. OTA exit) so a key held across a reboot does not fire a phantom press.
+bool     down(uint8_t i)    { return b[i].lastRaw == LOW; }
 
 }  // namespace buttons

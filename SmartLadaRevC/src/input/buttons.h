@@ -15,5 +15,6 @@ void poll(uint32_t now);
 bool     pressed(uint8_t i);   // true only on the poll of the initial press edge
 bool     repeat(uint8_t i);    // true on press edge and on accelerating repeats
 uint32_t heldMs(uint8_t i);    // how long the button has been held (0 if up)
+bool     down(uint8_t i);      // raw line level (LOW = pressed), pre-debounce; true even at boot
 
 }  // namespace buttons

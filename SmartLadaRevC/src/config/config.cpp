@@ -15,7 +15,7 @@ static const Settings DEFAULTS = {
   30,                         // dim after 30 s
   300,                        // off after 300 s (5 min)
   19,                         // gamma 1.9
-  30,                         // soft start 30 ms
+  250,                        // smoothing time constant tau (ms): eases Alice's stepped level
   1,                          // min level 1 %
   100,                        // max level 100 %
   20000,                      // PWM 20 kHz

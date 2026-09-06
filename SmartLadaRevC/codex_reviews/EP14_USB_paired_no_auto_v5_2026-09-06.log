@@ -1,0 +1,117 @@
+2026-09-06T16:27:43.505+03:00 CAPTURE START /dev/cu.usbmodem101
+2026-09-06T16:27:43.505+03:00 [boot #9] reset=UNKNOWN VBUS=5195mV PD12V=0 dieTemp=32.0C
+2026-09-06T16:27:43.505+03:00 EP14 trace v5: paired HS after settle, stop H/S auto reports on incoming color; '?' attrs+report-config
+2026-09-06T16:27:43.505+03:00 EP14 diagnostic build: USB '?' = read attrs, 'H' = one-shot HS mode correction
+2026-09-06T16:27:43.506+03:00 [16305] EP14 attrs manual: mode=1 enhanced=1 caps=1 h=0 s=0 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:27:43.506+03:00 EP14 reporting attr=0000 direction=RECV flags=41 timeout=8192 dst=0000/1
+2026-09-06T16:27:43.507+03:00 EP14 reporting attr=0001 direction=0 flags=15 min=1 max=28800 delta=1 last=0 dst=0000/1
+2026-09-06T16:27:43.507+03:00 EP14 reporting attr=0003 direction=0 flags=05 min=5 max=0 delta=0 last=65535 dst=0000/0
+2026-09-06T16:27:43.507+03:00 EP14 reporting attr=0004 direction=0 flags=05 min=5 max=0 delta=0 last=65535 dst=0000/0
+2026-09-06T16:27:43.507+03:00 EP14 reporting attr=0008 absent
+2026-09-06T16:27:43.507+03:00 EP14 reporting attr=4000 absent
+2026-09-06T16:27:43.507+03:00 EP14 reporting attr=4001 absent
+2026-09-06T16:27:55.696+03:00 [28494] EP14 RX src=0000/1 cl=0006 len=3 zcl=01fa01
+2026-09-06T16:27:57.922+03:00 [30720] EP14 stop-auto attr=0001 status=0
+2026-09-06T16:27:57.922+03:00 [30720] EP14 RX src=0000/1 cl=0300 len=9 zcl=01fb06a21900000101
+2026-09-06T16:27:57.924+03:00 [30722] ZB Fara rx on=1 hue=0 sat=0 val=107 (lvl now, hs latched)
+2026-09-06T16:27:57.924+03:00 [30722] ZB Fara rx on=1 hue=0 sat=0 val=107 (lvl now, hs latched)
+2026-09-06T16:27:58.024+03:00 [30822] ZB Fara rx on=1 hue=162 sat=0 val=107 (lvl now, hs latched)
+2026-09-06T16:27:58.025+03:00 [30823] ZB Fara rx on=1 hue=162 sat=25 val=107 (lvl now, hs latched)
+2026-09-06T16:27:58.073+03:00 [30872] ZB Fara on=1 hue=162 sat=25 val=107 -> mode=0 master=107 sB0=107
+2026-09-06T16:27:58.074+03:00 [30872] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=162 s=25 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:27:58.076+03:00 [30874] EP14 paired HS v5 h=162 s=25 status=0
+2026-09-06T16:27:58.084+03:00 [30882] EP14 APS-confirm status=0 dstMode=2 dstEP=1 len=11 zcl=08400a000020a201002019
+2026-09-06T16:27:58.091+03:00 [30889] EP14 RX src=0000/1 cl=0300 len=5 zcl=00400b0a00
+2026-09-06T16:27:58.475+03:00 [31272] ZB report lamps on=0xF bri=107,107,107,107  fara mode=0 master=107
+2026-09-06T16:28:00.374+03:00 [33172] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=162 s=25 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:28:00.679+03:00 [33477] EP14 RX src=0000/1 cl=0008 len=8 zcl=01fc00b40a000101
+2026-09-06T16:28:00.679+03:00 [33477] ZB Fara rx on=1 hue=162 sat=25 val=114 (lvl now, hs latched)
+2026-09-06T16:28:00.747+03:00 [33545] EP14 RX src=0000/1 cl=0008 len=5 zcl=001c0b0a00
+2026-09-06T16:28:00.780+03:00 [33578] ZB Fara rx on=1 hue=162 sat=25 val=121 (lvl now, hs latched)
+2026-09-06T16:28:00.828+03:00 [33627] ZB Fara on=1 hue=162 sat=25 val=121 -> mode=0 master=107 sB0=121
+2026-09-06T16:28:00.828+03:00 [33627] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=162 s=25 x=24939 y=24701 ct=250 on=1 level=121 (-1=missing/type)
+2026-09-06T16:28:00.881+03:00 [33679] ZB Fara rx on=1 hue=162 sat=25 val=128 (lvl now, hs latched)
+2026-09-06T16:28:00.982+03:00 [33780] ZB Fara rx on=1 hue=162 sat=25 val=135 (lvl now, hs latched)
+2026-09-06T16:28:01.031+03:00 [33829] ZB Fara on=1 hue=162 sat=25 val=135 -> mode=0 master=107 sB0=135
+2026-09-06T16:28:01.031+03:00 [33829] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=162 s=25 x=24939 y=24701 ct=250 on=1 level=135 (-1=missing/type)
+2026-09-06T16:28:01.083+03:00 [33881] ZB Fara rx on=1 hue=162 sat=25 val=142 (lvl now, hs latched)
+2026-09-06T16:28:01.184+03:00 [33982] ZB Fara rx on=1 hue=162 sat=25 val=149 (lvl now, hs latched)
+2026-09-06T16:28:01.236+03:00 [34034] ZB Fara on=1 hue=162 sat=25 val=149 -> mode=0 master=107 sB0=149
+2026-09-06T16:28:01.237+03:00 [34035] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=162 s=25 x=24939 y=24701 ct=250 on=1 level=149 (-1=missing/type)
+2026-09-06T16:28:01.288+03:00 [34083] ZB Fara rx on=1 hue=162 sat=25 val=156 (lvl now, hs latched)
+2026-09-06T16:28:01.386+03:00 [34184] ZB Fara rx on=1 hue=162 sat=25 val=164 (lvl now, hs latched)
+2026-09-06T16:28:01.435+03:00 [34233] ZB Fara on=1 hue=162 sat=25 val=164 -> mode=0 master=107 sB0=164
+2026-09-06T16:28:01.436+03:00 [34234] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=162 s=25 x=24939 y=24701 ct=250 on=1 level=164 (-1=missing/type)
+2026-09-06T16:28:01.487+03:00 [34285] ZB Fara rx on=1 hue=162 sat=25 val=172 (lvl now, hs latched)
+2026-09-06T16:28:01.588+03:00 [34386] ZB Fara rx on=1 hue=162 sat=25 val=180 (lvl now, hs latched)
+2026-09-06T16:28:01.636+03:00 [34435] ZB Fara on=1 hue=162 sat=25 val=180 -> mode=0 master=107 sB0=180
+2026-09-06T16:28:01.637+03:00 [34435] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=162 s=25 x=24939 y=24701 ct=250 on=1 level=180 (-1=missing/type)
+2026-09-06T16:28:01.700+03:00 [34498] EP14 RX src=0000/1 cl=0008 len=5 zcl=001d0b0a00
+2026-09-06T16:28:01.991+03:00 [34788] ZB report lamps on=0xF bri=180,180,180,180  fara mode=0 master=107
+2026-09-06T16:28:03.937+03:00 [36735] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=162 s=25 x=24939 y=24701 ct=250 on=1 level=180 (-1=missing/type)
+2026-09-06T16:28:13.302+03:00 [46099] EP14 stop-auto attr=0001 status=0
+2026-09-06T16:28:13.302+03:00 [46100] EP14 RX src=0000/1 cl=0300 len=9 zcl=01fd069ef300000101
+2026-09-06T16:28:13.303+03:00 [46101] ZB Fara rx on=1 hue=162 sat=25 val=180 (lvl now, hs latched)
+2026-09-06T16:28:13.303+03:00 [46102] ZB Fara rx on=1 hue=162 sat=25 val=180 (lvl now, hs latched)
+2026-09-06T16:28:13.404+03:00 [46202] ZB Fara rx on=1 hue=158 sat=25 val=180 (lvl now, hs latched)
+2026-09-06T16:28:13.404+03:00 [46203] ZB Fara rx on=1 hue=158 sat=243 val=180 (lvl now, hs latched)
+2026-09-06T16:28:13.453+03:00 [46251] ZB Fara on=1 hue=158 sat=243 val=180 -> mode=4 master=180 sB0=180
+2026-09-06T16:28:13.453+03:00 [46251] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=158 s=243 x=24939 y=24701 ct=250 on=1 level=180 (-1=missing/type)
+2026-09-06T16:28:13.455+03:00 [46252] EP14 paired HS v5 h=158 s=243 status=0
+2026-09-06T16:28:13.463+03:00 [46261] EP14 APS-confirm status=0 dstMode=2 dstEP=1 len=11 zcl=08410a0000209e010020f3
+2026-09-06T16:28:13.470+03:00 [46269] EP14 RX src=0000/1 cl=0300 len=5 zcl=00410b0a00
+2026-09-06T16:28:13.854+03:00 [46651] ZB report lamps on=0xF bri=180,180,180,180  fara mode=4 master=180
+2026-09-06T16:28:15.753+03:00 [48551] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=158 s=243 x=24939 y=24701 ct=250 on=1 level=180 (-1=missing/type)
+2026-09-06T16:28:22.268+03:00 [55066] EP14 stop-auto attr=0001 status=0
+2026-09-06T16:28:22.268+03:00 [55066] EP14 RX src=0000/1 cl=0300 len=9 zcl=01fe065ff300000101
+2026-09-06T16:28:22.269+03:00 [55067] ZB Fara rx on=1 hue=158 sat=243 val=180 (lvl now, hs latched)
+2026-09-06T16:28:22.269+03:00 [55068] ZB Fara rx on=1 hue=158 sat=243 val=180 (lvl now, hs latched)
+2026-09-06T16:28:22.370+03:00 [55168] ZB Fara rx on=1 hue=95 sat=243 val=180 (lvl now, hs latched)
+2026-09-06T16:28:22.370+03:00 [55169] ZB Fara rx on=1 hue=95 sat=243 val=180 (lvl now, hs latched)
+2026-09-06T16:28:22.418+03:00 [55217] ZB Fara on=1 hue=95 sat=243 val=180 -> mode=2 master=180 sB0=180
+2026-09-06T16:28:22.419+03:00 [55217] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=95 s=243 x=24939 y=24701 ct=250 on=1 level=180 (-1=missing/type)
+2026-09-06T16:28:22.421+03:00 [55219] EP14 paired HS v5 h=95 s=243 status=0
+2026-09-06T16:28:22.429+03:00 [55227] EP14 APS-confirm status=0 dstMode=2 dstEP=1 len=11 zcl=08420a0000205f010020f3
+2026-09-06T16:28:22.438+03:00 [55236] EP14 RX src=0000/1 cl=0300 len=5 zcl=00420b0a00
+2026-09-06T16:28:22.820+03:00 [55617] ZB report lamps on=0xF bri=180,180,180,180  fara mode=2 master=180
+2026-09-06T16:28:24.719+03:00 [57517] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=95 s=243 x=24939 y=24701 ct=250 on=1 level=180 (-1=missing/type)
+2026-09-06T16:28:38.568+03:00 [71366] EP14 stop-auto attr=0001 status=0
+2026-09-06T16:28:38.569+03:00 [71366] EP14 RX src=0000/1 cl=0300 len=9 zcl=01ff0600f300000101
+2026-09-06T16:28:38.570+03:00 [71368] ZB Fara rx on=1 hue=95 sat=243 val=180 (lvl now, hs latched)
+2026-09-06T16:28:38.570+03:00 [71368] ZB Fara rx on=1 hue=95 sat=243 val=180 (lvl now, hs latched)
+2026-09-06T16:28:38.670+03:00 [71468] ZB Fara rx on=1 hue=0 sat=243 val=180 (lvl now, hs latched)
+2026-09-06T16:28:38.670+03:00 [71469] ZB Fara rx on=1 hue=0 sat=243 val=180 (lvl now, hs latched)
+2026-09-06T16:28:38.720+03:00 [71518] ZB Fara on=1 hue=0 sat=243 val=180 -> mode=1 master=180 sB0=180
+2026-09-06T16:28:38.720+03:00 [71519] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=0 s=243 x=24939 y=24701 ct=250 on=1 level=180 (-1=missing/type)
+2026-09-06T16:28:38.721+03:00 [71519] EP14 paired HS v5 h=0 s=243 status=0
+2026-09-06T16:28:38.731+03:00 [71529] EP14 APS-confirm status=0 dstMode=2 dstEP=1 len=11 zcl=08430a00002000010020f3
+2026-09-06T16:28:38.738+03:00 [71536] EP14 RX src=0000/1 cl=0300 len=5 zcl=00430b0a00
+2026-09-06T16:28:39.121+03:00 [71918] ZB report lamps on=0xF bri=180,180,180,180  fara mode=1 master=180
+2026-09-06T16:28:41.021+03:00 [73818] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=0 s=243 x=24939 y=24701 ct=250 on=1 level=180 (-1=missing/type)
+2026-09-06T16:28:50.505+03:00 [83299] EP14 stop-auto attr=0001 status=0
+2026-09-06T16:28:50.505+03:00 [83299] EP14 RX src=0000/1 cl=0300 len=9 zcl=010006a21900000101
+2026-09-06T16:28:50.505+03:00 [83300] ZB Fara rx on=1 hue=0 sat=243 val=180 (lvl now, hs latched)
+2026-09-06T16:28:50.505+03:00 [83301] ZB Fara rx on=1 hue=0 sat=243 val=180 (lvl now, hs latched)
+2026-09-06T16:28:50.603+03:00 [83401] ZB Fara rx on=1 hue=162 sat=243 val=180 (lvl now, hs latched)
+2026-09-06T16:28:50.603+03:00 [83402] ZB Fara rx on=1 hue=162 sat=25 val=180 (lvl now, hs latched)
+2026-09-06T16:28:50.652+03:00 [83450] ZB Fara on=1 hue=162 sat=25 val=180 -> mode=0 master=180 sB0=180
+2026-09-06T16:28:50.652+03:00 [83450] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=162 s=25 x=24939 y=24701 ct=250 on=1 level=180 (-1=missing/type)
+2026-09-06T16:28:50.654+03:00 [83451] EP14 paired HS v5 h=162 s=25 status=0
+2026-09-06T16:28:50.662+03:00 [83461] EP14 APS-confirm status=0 dstMode=2 dstEP=1 len=11 zcl=08440a000020a201002019
+2026-09-06T16:28:50.669+03:00 [83468] EP14 RX src=0000/1 cl=0300 len=5 zcl=00440b0a00
+2026-09-06T16:28:51.053+03:00 [83850] ZB report lamps on=0xF bri=180,180,180,180  fara mode=0 master=180
+2026-09-06T16:28:52.952+03:00 [85750] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=162 s=25 x=24939 y=24701 ct=250 on=1 level=180 (-1=missing/type)
+2026-09-06T16:29:05.916+03:00 [98714] EP14 stop-auto attr=0001 status=0
+2026-09-06T16:29:05.917+03:00 [98714] EP14 RX src=0000/1 cl=0300 len=9 zcl=0101065ff300000101
+2026-09-06T16:29:05.917+03:00 [98716] ZB Fara rx on=1 hue=162 sat=25 val=180 (lvl now, hs latched)
+2026-09-06T16:29:05.918+03:00 [98716] ZB Fara rx on=1 hue=162 sat=25 val=180 (lvl now, hs latched)
+2026-09-06T16:29:06.018+03:00 [98816] ZB Fara rx on=1 hue=95 sat=25 val=180 (lvl now, hs latched)
+2026-09-06T16:29:06.018+03:00 [98817] ZB Fara rx on=1 hue=95 sat=243 val=180 (lvl now, hs latched)
+2026-09-06T16:29:06.067+03:00 [98866] ZB Fara on=1 hue=95 sat=243 val=180 -> mode=2 master=180 sB0=180
+2026-09-06T16:29:06.068+03:00 [98866] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=95 s=243 x=24939 y=24701 ct=250 on=1 level=180 (-1=missing/type)
+2026-09-06T16:29:06.068+03:00 [98867] EP14 paired HS v5 h=95 s=243 status=0
+2026-09-06T16:29:06.078+03:00 [98876] EP14 APS-confirm status=0 dstMode=2 dstEP=1 len=11 zcl=08450a0000205f010020f3
+2026-09-06T16:29:06.085+03:00 [98884] EP14 RX src=0000/1 cl=0300 len=5 zcl=00450b0a00
+2026-09-06T16:29:06.469+03:00 [99266] ZB report lamps on=0xF bri=180,180,180,180  fara mode=2 master=180
+2026-09-06T16:29:08.370+03:00 [101166] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=95 s=243 x=24939 y=24701 ct=250 on=1 level=180 (-1=missing/type)
+2026-09-06T16:31:48.080+03:00 CAPTURE STOP

@@ -1,14 +1,23 @@
 #include "effects.h"
 #include <Preferences.h>
+#include <esp_random.h>
 #include <math.h>
 
 namespace fx {
+
+// Channel index = lamp function (see channels.cpp): ch0=turn, ch1=marker, ch2=reverse, ch3=stop.
+static constexpr uint8_t CH_TURN = 0, CH_MARK = 1, CH_REV = 2, CH_STOP = 3;
+
+// Current time, stashed by compute() so the stateful DRIVE effect (an FSM, not a pure phase
+// function) can advance on real time inside its render().
+static uint32_t s_fxNow = 0;
 
 static inline uint8_t bscale(uint8_t bright, float f) {   // f in 0..1
   if (f <= 0) return 0;
   int v = (int)(bright * f + 0.5f);
   return v > 255 ? 255 : (uint8_t)v;
 }
+static inline uint8_t pctScale(uint8_t bright, uint8_t pct) { return bscale(bright, pct / 100.0f); }
 
 // ---- Breathe: all channels swell up and down together ----
 static Param breatheP[] = {
@@ -21,16 +30,14 @@ static void breatheRender(float ph, const Effect*, uint8_t bright, uint8_t out[4
   for (uint8_t i = 0; i < 4; i++) out[i] = o;
 }
 
-// ---- Blink: all channels on/off ----
-static Param blinkP[] = {
-  {"On",  PT_TIME_MS, 100, 20000, 100, 500, 500},
-  {"Off", PT_TIME_MS, 100, 20000, 100, 500, 500},
+// ---- Turn: ONLY the turn-signal channel blinks (iconic 1.5 Hz = 333/333 ms) ----
+static Param turnP[] = {
+  {"Period", PT_TIME_MS, 200, 4000, 50, 666, 666},   // full on+off; 666 ms = 1.5 Hz, 50/50
 };
-static uint32_t blinkCycle(const Effect* s) { return (uint32_t)(s->params[0].value + s->params[1].value); }
-static void blinkRender(float ph, const Effect* s, uint8_t bright, uint8_t out[4]) {
-  float onFrac = (float)s->params[0].value / (s->params[0].value + s->params[1].value);
-  uint8_t o = (ph < onFrac) ? bright : 0;
-  for (uint8_t i = 0; i < 4; i++) out[i] = o;
+static uint32_t turnCycle(const Effect* s) { return (uint32_t)s->params[0].value; }
+static void turnRender(float ph, const Effect*, uint8_t bright, uint8_t out[4]) {
+  for (uint8_t i = 0; i < 4; i++) out[i] = 0;
+  out[CH_TURN] = (ph < 0.5f) ? bright : 0;
 }
 
 // ---- Chase: one channel at a time sweeps CH1->CH4, with optional edge fade ----
@@ -70,11 +77,78 @@ static void fadeRender(float ph, const Effect*, uint8_t bright, uint8_t out[4]) 
   out[b] = bscale(bright, local);
 }
 
+// ---- Drive: logical random driving timeline as a finite-state machine (ported from
+// SmartLadaC6/src/anim). Stateful, so it renders off s_fxNow, not the phase. Rules baked
+// into the graph: REVERSE only from STOP; TURN not directly from CRUISE; PARKED from STOP/HAZARD.
+static constexpr uint8_t  D_BLINK = 255;
+static constexpr uint16_t DRV_BLINK_MS = 333;        // 1.5 Hz iconic
+static constexpr uint8_t  DRV_MARK_DIM = 35;         // marker background; with STOP -> 100%
+enum DState : uint8_t { D_CRUISE=0, D_BRAKE, D_STOP, D_TURN, D_BRAKETURN, D_REVERSE, D_HAZARD, D_PARKED, D_COUNT };
+struct DDef { uint16_t durMin, durMax; uint8_t stop, turn, rev, markBase; };
+static const DDef DSTATE[D_COUNT] = {
+  {3000, 12000,      0,      0,     0,  DRV_MARK_DIM},   // CRUISE
+  {1500,  3500,    100,      0,     0,  DRV_MARK_DIM},   // BRAKE
+  {1200,  2500,    100,      0,     0,  DRV_MARK_DIM},   // STOP
+  {1500,  3000,      0, D_BLINK,    0,  DRV_MARK_DIM},   // TURN
+  {1000,  1500,    100, D_BLINK,    0,  DRV_MARK_DIM},   // BRAKETURN
+  {2000,  6000,    100,      0,   100,  DRV_MARK_DIM},   // REVERSE
+  {2000,  6000,      0, D_BLINK,    0,  DRV_MARK_DIM},   // HAZARD
+  {2000,  4000,      0,      0,     0,  0},              // PARKED
+};
+struct DEdge { uint8_t to, w; };
+static const DEdge E_CRUISE[]={{D_BRAKE,3},{D_BRAKETURN,2}};
+static const DEdge E_BRAKE[]={{D_STOP,3},{D_TURN,2},{D_CRUISE,2}};
+static const DEdge E_STOP[]={{D_CRUISE,2},{D_TURN,2},{D_REVERSE,1},{D_HAZARD,1},{D_PARKED,1}};
+static const DEdge E_TURN[]={{D_CRUISE,3},{D_BRAKE,1}};
+static const DEdge E_BRAKETURN[]={{D_CRUISE,2},{D_TURN,1},{D_STOP,1}};
+static const DEdge E_REVERSE[]={{D_STOP,2},{D_CRUISE,1}};
+static const DEdge E_HAZARD[]={{D_PARKED,2},{D_STOP,1},{D_CRUISE,1}};
+static const DEdge E_PARKED[]={{D_CRUISE,1}};
+struct DAdj { const DEdge* e; uint8_t n; };
+static const DAdj DADJ[D_COUNT] = {
+  {E_CRUISE,2},{E_BRAKE,3},{E_STOP,5},{E_TURN,2},
+  {E_BRAKETURN,3},{E_REVERSE,2},{E_HAZARD,3},{E_PARKED,1},
+};
+static uint8_t  s_dstate = D_STOP;
+static uint32_t s_dPhaseStart = 0;
+static uint16_t s_dPhaseDur = 0;
+static bool     s_driveInit = false;                 // reset by compute() on entering DRIVE
+static uint16_t dPickDur(uint8_t st) {
+  uint16_t lo = DSTATE[st].durMin, hi = DSTATE[st].durMax;
+  return lo + (uint16_t)(esp_random() % (uint32_t)(hi - lo + 1));
+}
+static uint8_t dPickNext(uint8_t st) {
+  const DAdj& a = DADJ[st];
+  uint16_t total = 0;
+  for (uint8_t i = 0; i < a.n; i++) total += a.e[i].w;
+  uint32_t r = esp_random() % total;
+  for (uint8_t i = 0; i < a.n; i++) { if (r < a.e[i].w) return a.e[i].to; r -= a.e[i].w; }
+  return a.e[0].to;
+}
+static void driveRender(float, const Effect*, uint8_t bright, uint8_t out[4]) {
+  uint32_t now = s_fxNow;
+  if (!s_driveInit) { s_dstate = D_STOP; s_dPhaseStart = now; s_dPhaseDur = dPickDur(D_STOP); s_driveInit = true; }
+  if (now - s_dPhaseStart >= s_dPhaseDur) {
+    s_dstate = dPickNext(s_dstate); s_dPhaseStart = now; s_dPhaseDur = dPickDur(s_dstate);
+  }
+  const DDef& d = DSTATE[s_dstate];
+  bool blinkOn = (now / DRV_BLINK_MS) % 2 == 0;
+  uint8_t stop = d.stop;
+  uint8_t turn = (d.turn == D_BLINK) ? (blinkOn ? 100 : 0) : d.turn;
+  uint8_t mark = (stop > 0) ? 100 : d.markBase;      // marker/stop combined
+  out[CH_STOP] = pctScale(bright, stop);
+  out[CH_TURN] = pctScale(bright, turn);
+  out[CH_REV]  = pctScale(bright, d.rev);
+  out[CH_MARK] = pctScale(bright, mark);
+}
+static uint32_t driveCycle(const Effect*) { return 1000; }   // phase unused (FSM on real time)
+
 Effect EFFECTS[] = {
   {"Breathe", breatheP, 1, breatheCycle, breatheRender},
-  {"Blink",   blinkP,   2, blinkCycle,   blinkRender},
+  {"Turn",    turnP,    1, turnCycle,    turnRender},
   {"Chase",   chaseP,   2, chaseCycle,   chaseRender},
   {"Fade",    fadeP,    1, fadeCycle,    fadeRender},
+  {"Drive",   nullptr,  0, driveCycle,   driveRender},
 };
 const uint8_t COUNT = sizeof(EFFECTS) / sizeof(EFFECTS[0]);
 
@@ -83,14 +157,16 @@ static float    s_phase = 0.0f;
 static uint32_t s_lastMs = 0;
 static uint8_t  s_lastMode = 255;
 
-void compute(uint8_t mode, uint32_t now, uint8_t master, bool faraOn,
+void compute(uint8_t mode, uint32_t now, uint8_t master,
              uint8_t lampOn, const uint8_t staticBri[4], uint8_t out[4]) {
   uint32_t dt = now - s_lastMs;
   s_lastMs = now;                                    // advance clock even when off (no jump on resume)
-  if (mode != s_lastMode) { s_phase = 0.0f; s_lastMode = mode; }
+  s_fxNow  = now;                                    // for the stateful DRIVE effect
+  if (mode != s_lastMode) { s_phase = 0.0f; s_lastMode = mode; s_driveInit = false; }
 
-  // Effect only when the Fara master device is on AND an animation mode is selected.
-  if (faraOn && mode != 0 && mode <= COUNT) {
+  // Effect layer: Fara (EP14) color selected an animation mode -> frame * master (effect
+  // brightness) across all 4 channels. Fara off/white -> mode 0 -> static below.
+  if (mode != 0 && mode <= COUNT) {
     const Effect* e = &EFFECTS[mode - 1];
     uint32_t cyc = e->cycle(e);
     if (cyc > 0) {
@@ -101,11 +177,10 @@ void compute(uint8_t mode, uint32_t now, uint8_t master, bool faraOn,
     return;
   }
 
-  // Static (Fara on) or passthrough (Fara off): per-channel staticBri gated by lampOn.
-  // Fara off -> no master scaling, lamps run at their own EP levels (independent control).
-  uint16_t m = faraOn ? master : 255;
+  // Static: each lamp at its own level, gated by lampOn. The static master (group dimmer /
+  // Fara-white / local idle) fans out into staticBri, so it is NOT scaled again here.
   for (uint8_t i = 0; i < 4; i++)
-    out[i] = (lampOn & (1 << i)) ? (uint8_t)((int)staticBri[i] * m / 255) : 0;
+    out[i] = (lampOn & (1 << i)) ? staticBri[i] : 0;
 }
 
 const char* modeName(uint8_t mode) { return (mode == 0) ? "Static" : EFFECTS[mode - 1].name; }

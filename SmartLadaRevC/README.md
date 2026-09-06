@@ -12,11 +12,13 @@ Forked from `../SmartLadaRevB`; the `src/` layers are reused, plus a Zigbee laye
 - **4 PWM lamp channels** — LEDC, per-channel gamma + min/max window + soft-start slew.
 - **OLED menu** (SSD1315, I²C) driven by 4 buttons: mode, brightness (per-channel + master),
   effect timings, lamp calibration (gamma/soft-start/levels/PWM freq), display, factory reset.
-- **Effects**: Breathe, Blink, Chase, Fade (pure phase functions; editable timings, in NVS).
+- **Effects**: Breathe, Turn (turn-signal-only blink, 1.5 Hz), Chase, Fade, Drive (a random
+  but logical driving-scenario FSM: cruise/brake/stop/turn/reverse/hazard/parked).
 - **Zigbee end device** — five endpoints to Alice:
-  - `EP10..13` — the four lamps (`ZigbeeDimmableLight`: on/off + brightness).
-  - `EP14` "Fara" (`ZigbeeColorDimmableLight`) — **level = master brightness**, **hue = effect
-    selector**, on/off = master power.
+  - `EP10..13` — the four lamps by function: **Turn / Marker / Reverse / Stop** (`ZigbeeDimmableLight`).
+  - `EP14` "Fara" (`ZigbeeColorDimmableLight`) — the **effect layer**: **color = effect
+    selector**, **level = effect brightness**; **white** = static, its level fanning out as the
+    overall lamp brightness (like the group dimmer); off = static.
 - Settings + effect timings persisted in NVS.
 
 ## Architecture
@@ -28,7 +30,7 @@ the menu and the Zigbee callbacks both write it (last-writer-wins), and the loop
 setup(): channels::begin -> display -> config::load -> fx::loadParams
          -> setFreq/Calib/SoftMs -> buttons -> menu -> zb::begin (non-blocking join)
 loop():  buttons::poll -> menu::update -> zb::update -> [zb::consumeDirty -> menu redraw]
-         fx::compute(mode, now, master, faraOn, lampOn, staticBri, out[4])   // compositor
+         fx::compute(mode, now, master, lampOn, staticBri, out[4])           // compositor
          channels::write(now, out)                                            // slew -> gamma -> LEDC
          menu::render()                                                       // redraws only on change
 ```
@@ -45,18 +47,43 @@ loop():  buttons::poll -> menu::update -> zb::update -> [zb::consumeDirty -> men
 
 ### Compositor / control model
 
-- **Fara on + effect mode** → animation frame × master, across all 4 channels.
-- **Fara on + static (mode 0)** → per-channel `staticBri × master`, gated by the `lampOn` bitmask.
-- **Fara off (passthrough)** → per-channel `staticBri` (no master), individual lamp control.
-- A **lone** individual-lamp command exits an effect into static; a lamp command that is part
-  of a **group** operation (Alice group blasts level to all endpoints at once) keeps the mode
-  — distinguished by proximity to the last Fara command (`GROUP_WINDOW_MS`).
-- The local menu keeps `faraOn = 1`, so `master` always applies to local control.
+The `mode` alone picks the layer; EP14 (Fara) is the effect layer, EP10-13 (lamps/group) the
+static picture:
+
+- **Effect (mode ≠ 0)** → animation frame × `master` (effect brightness), across all 4 channels.
+- **Static (mode 0)** → per-channel `staticBri`, gated by `lampOn` — **no master scaling**.
+  The static "master" is the group dimmer (and Fara-white / local idle), which fans out into
+  `staticBri`, so it is applied once, not twice (no double-dimming).
+- **EP14 (Fara)**: off → static; white → static + fan-out its level to every `staticBri`;
+  color → effect (hue selects it, level = effect brightness). Fara never turns lamps off.
+- **EP10-13 (lamps/group)**: on/off → `lampOn`, level → `staticBri`. Lamp commands never change
+  the mode (a level does not force the lamp on, so an Alice group dim leaves off lamps dark).
+- The local menu writes `mode` / `staticBri` directly, so it is authoritative (last-writer-wins).
+
+### Yandex color preset compatibility
+
+EP14 receives hue/saturation unchanged, but suppresses automatic reports of those two
+attributes before processing color commands. It continues to report brightness/on-off;
+EP10–13 reporting is unaffected. Local effect changes do not update the app's color selector.
+This is a compatibility workaround, not a correction to the color values.
+
+Hardware investigation on 2026-09-06 (Arduino-ESP32 **3.3.10**) found that even a single
+combined H/S report, identical to the received command, could replace a Yandex preset with
+an unnamed color. With color reports disabled, white/color transitions, reopening the
+device card and changing brightness preserved the preset. Sending one unchanged white
+report reproduced the replacement. The precise station/app conversion causing this remains
+unknown; no saturation scaling or preset-specific offsets are applied.
+
+Implementation: `onApsIndication()` in `src/net/zigbee.cpp`, chained to Arduino's existing
+APS handler so binding-list processing continues. Recheck this hook after upgrading the
+Arduino core. Incoming color attributes remain readable. Re-pairing and other controllers
+have not been validated with this workaround.
 
 ## Pin map (ground truth, from the PCB netlist)
 
 ```
-Lamp channels:  OUT0=IO1  OUT1=IO0  OUT2=IO2  OUT3=IO3   (low-side AOD4184, gate active-HIGH)
+Lamp channels:  turn=IO0  marker=IO1  reverse=IO2  stop=IO3   (low-side AOD4184, gate active-HIGH)
+                (ch index = function; those GPIOs land on Fastons OUT1/OUT0/OUT2/OUT3)
 Buttons (J4):   KEY1=IO23 KEY2=IO22 KEY3=IO21 KEY4=IO20  (active-LOW, INPUT_PULLUP)
 I2C (OLED):     SCL=IO18  SDA=IO19   addr 0x3C
 Native USB:     D-=IO12   D+=IO13    (CDCOnBoot=cdc)
@@ -66,8 +93,10 @@ VBUS sense:     IO4   (ADC; divider R7=100k/R8=33k)
 Strapping:      BOOT=IO9 (SW2)   RESET=EN (SW1)
 ```
 
-Note: Rev C has **no external gate pulldown** — `channels::begin()` runs first in `setup()`
-to force the outputs low at boot.
+Note: each MOSFET gate has a **100 k pulldown** (Rpd1..4) + 100 R series (Rg1..4) in
+hardware; `channels::begin()` also runs first in `setup()` to force the outputs low at boot.
+The USB-C **VBUS pins are the +12 V net** — it feeds both the buck (→3.3 V for the ESP) and
+the lamp common (J7) + indicator LEDs, so a cold-boot lamp inrush can brown out the ESP.
 
 ## Build & flash
 

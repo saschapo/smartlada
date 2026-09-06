@@ -1,0 +1,17 @@
+2026-09-06T16:40:59.786+03:00 CAPTURE START /dev/cu.usbmodem101
+2026-09-06T16:40:59.786+03:00 [boot #11] reset=UNKNOWN VBUS=5207mV PD12V=0 dieTemp=32.0C
+2026-09-06T16:40:59.786+03:00 EP14: Yandex color-report workaround enabled
+2026-09-06T16:40:59.786+03:00 SmartLadaRevC 1.0.9-revC (revC) ready
+2026-09-06T16:40:59.786+03:00 [2312] ZB report lamps on=0xF bri=147,147,147,147  fara mode=3 master=255
+2026-09-06T16:41:33.125+03:00 [72449] ZB Fara rx on=1 hue=0 sat=0 val=255 (lvl now, hs latched)
+2026-09-06T16:41:33.126+03:00 [72449] ZB Fara rx on=1 hue=0 sat=0 val=255 (lvl now, hs latched)
+2026-09-06T16:41:33.227+03:00 [72550] ZB Fara rx on=1 hue=158 sat=0 val=255 (lvl now, hs latched)
+2026-09-06T16:41:33.227+03:00 [72551] ZB Fara rx on=1 hue=158 sat=243 val=255 (lvl now, hs latched)
+2026-09-06T16:41:33.276+03:00 [72599] ZB Fara on=1 hue=158 sat=243 val=255 -> mode=4 master=255 sB0=147
+2026-09-06T16:41:33.676+03:00 [72999] ZB report lamps on=0xF bri=147,147,147,147  fara mode=4 master=255
+2026-09-06T16:41:34.729+03:00 [74053] ZB Fara rx on=1 hue=158 sat=243 val=255 (lvl now, hs latched)
+2026-09-06T16:41:34.731+03:00 [74053] ZB Fara rx on=1 hue=158 sat=243 val=255 (lvl now, hs latched)
+2026-09-06T16:41:34.830+03:00 [74153] ZB Fara rx on=1 hue=162 sat=243 val=255 (lvl now, hs latched)
+2026-09-06T16:41:34.830+03:00 [74154] ZB Fara rx on=1 hue=162 sat=25 val=255 (lvl now, hs latched)
+2026-09-06T16:41:34.880+03:00 [74203] ZB Fara on=1 hue=162 sat=25 val=255 -> mode=0 master=255 sB0=255
+2026-09-06T16:41:35.222+03:00 CAPTURE STOP

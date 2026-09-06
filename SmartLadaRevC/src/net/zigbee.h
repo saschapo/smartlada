@@ -14,6 +14,14 @@ bool begin();               // configure endpoints + start the stack; join runs 
 void update(uint32_t now);  // poll link state; flags dirty on connect/disconnect transitions
 bool connected();           // true once joined a network
 bool consumeDirty();        // returns (and clears) whether network activity changed state
-void factoryReset();        // leave the network + erase Zigbee NVS, then reboot
+void factoryReset();        // leave the network + erase Zigbee NVS, then reboot (== re-pair)
+
+// Network status (valid once connected(); 0/0xFFFF-ish before join).
+uint16_t panId();
+uint8_t  channel();
+uint16_t shortAddr();
+// Link to the parent (coordinator) from our neighbor table. Returns false if not found.
+// lqi 0..255, rssi in dBm, parentAddr usually 0x0000 (coordinator).
+bool     parentLink(uint8_t& lqi, int8_t& rssi, uint16_t& parentAddr);
 
 }  // namespace zb

@@ -34,12 +34,14 @@ struct Effect {
 extern Effect        EFFECTS[];
 extern const uint8_t COUNT;                        // animation effects (excludes Static)
 
-// Compute the 4 channel outputs (the compositor):
-//   Fara on  + animation mode -> effect frame * master, across all 4 channels
-//   Fara on  + static (mode 0) -> per-channel staticBri * master, gated by lampOn
-//   Fara off (passthrough)      -> per-channel staticBri, no master, gated by lampOn
-// (lampOn bit i enables channel i; the local menu keeps faraOn=1 so master always applies.)
-void compute(uint8_t mode, uint32_t now, uint8_t master, bool faraOn,
+// Compute the 4 channel outputs (the compositor). The mode alone picks the layer:
+//   mode != 0 (effect) -> effect frame * master, across all 4 channels (master = effect
+//                         brightness = Fara EP14 level). Fara color selects the effect.
+//   mode == 0 (static) -> per-channel staticBri, gated by lampOn (NO master scaling).
+//                         The static "master" is the group dimmer / Fara-white / local idle,
+//                         which fans out into staticBri -- so it is not applied twice here.
+// EP14 (Fara) on/off/color sets mode; EP10-13 (lamps/group) set staticBri + lampOn.
+void compute(uint8_t mode, uint32_t now, uint8_t master,
              uint8_t lampOn, const uint8_t staticBri[4], uint8_t out[4]);
 
 const char* modeName(uint8_t mode);                // 0 = "Static"

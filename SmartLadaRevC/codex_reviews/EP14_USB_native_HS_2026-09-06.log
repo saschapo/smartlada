@@ -1,0 +1,208 @@
+2026-09-06T16:03:02.678+03:00 CAPTURE START /dev/cu.usbmodem101
+2026-09-06T16:03:02.678+03:00 [boot #8] reset=UNKNOWN VBUS=5203mV PD12V=0 dieTemp=31.0C
+2026-09-06T16:03:02.678+03:00 EP14 trace v3: '?' attrs+report-config, 'R' SDK HS report, 'P' paired HS report via APS; manual only
+2026-09-06T16:03:02.678+03:00 EP14 diagnostic build: USB '?' = read attrs, 'H' = one-shot HS mode correction
+2026-09-06T16:03:02.680+03:00 [46561] EP14 attrs manual: mode=1 enhanced=1 caps=1 h=0 s=0 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:03:02.680+03:00 EP14 reporting attr=0000 direction=RECV flags=41 timeout=8192 dst=0000/1
+2026-09-06T16:03:02.680+03:00 EP14 reporting attr=0001 direction=0 flags=15 min=1 max=28800 delta=1 last=0 dst=0000/1
+2026-09-06T16:03:02.680+03:00 EP14 reporting attr=0003 direction=0 flags=05 min=5 max=0 delta=0 last=65535 dst=0000/0
+2026-09-06T16:03:02.680+03:00 EP14 reporting attr=0004 direction=0 flags=05 min=5 max=0 delta=0 last=65535 dst=0000/0
+2026-09-06T16:03:02.680+03:00 EP14 reporting attr=0008 absent
+2026-09-06T16:03:02.680+03:00 EP14 reporting attr=4000 absent
+2026-09-06T16:03:02.681+03:00 EP14 reporting attr=4001 absent
+2026-09-06T16:03:31.824+03:00 [75705] EP14 RX src=0000/1 cl=0300 len=9 zcl=01e706a21900000101
+2026-09-06T16:03:31.827+03:00 [75706] ZB Fara rx on=1 hue=0 sat=0 val=107 (lvl now, hs latched)
+2026-09-06T16:03:31.827+03:00 [75707] ZB Fara rx on=1 hue=0 sat=0 val=107 (lvl now, hs latched)
+2026-09-06T16:03:31.926+03:00 [75807] ZB Fara rx on=1 hue=162 sat=0 val=107 (lvl now, hs latched)
+2026-09-06T16:03:31.926+03:00 [75808] ZB Fara rx on=1 hue=162 sat=25 val=107 (lvl now, hs latched)
+2026-09-06T16:03:31.944+03:00 [75825] EP14 RX src=0000/1 cl=0300 len=5 zcl=00160b0a00
+2026-09-06T16:03:31.974+03:00 [75856] ZB Fara on=1 hue=162 sat=25 val=107 -> mode=0 master=107 sB0=107
+2026-09-06T16:03:31.975+03:00 [75856] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=162 s=25 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:03:31.975+03:00 [75857] EP14 HS report h=162 s=25 status=0,0
+2026-09-06T16:03:32.005+03:00 [75886] EP14 RX src=0000/1 cl=0300 len=5 zcl=00170b0a00
+2026-09-06T16:03:32.019+03:00 [75900] EP14 RX src=0000/1 cl=0300 len=5 zcl=00180b0a00
+2026-09-06T16:03:32.381+03:00 [76256] ZB report lamps on=0xF bri=107,107,107,107  fara mode=0 master=107
+2026-09-06T16:03:34.279+03:00 [78156] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=162 s=25 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:03:40.795+03:00 [84676] EP14 RX src=0000/1 cl=0300 len=9 zcl=01e8069ef300000101
+2026-09-06T16:03:40.797+03:00 [84678] ZB Fara rx on=1 hue=162 sat=25 val=107 (lvl now, hs latched)
+2026-09-06T16:03:40.798+03:00 [84678] ZB Fara rx on=1 hue=162 sat=25 val=107 (lvl now, hs latched)
+2026-09-06T16:03:40.898+03:00 [84779] ZB Fara rx on=1 hue=158 sat=25 val=107 (lvl now, hs latched)
+2026-09-06T16:03:40.898+03:00 [84780] ZB Fara rx on=1 hue=158 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:03:40.917+03:00 [84799] EP14 RX src=0000/1 cl=0300 len=5 zcl=001d0b0a00
+2026-09-06T16:03:40.946+03:00 [84828] ZB Fara on=1 hue=158 sat=243 val=107 -> mode=4 master=107 sB0=107
+2026-09-06T16:03:40.947+03:00 [84828] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=158 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:03:40.947+03:00 [84829] EP14 HS report h=158 s=243 status=0,0
+2026-09-06T16:03:40.971+03:00 [84852] EP14 RX src=0000/1 cl=0300 len=5 zcl=001e0b0a00
+2026-09-06T16:03:40.984+03:00 [84866] EP14 RX src=0000/1 cl=0300 len=5 zcl=001f0b0a00
+2026-09-06T16:03:41.347+03:00 [85228] ZB report lamps on=0xF bri=107,107,107,107  fara mode=4 master=107
+2026-09-06T16:03:43.247+03:00 [87128] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=158 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:03:48.350+03:00 [92231] EP14 RX src=0000/1 cl=0300 len=9 zcl=01e9065ff300000101
+2026-09-06T16:03:48.352+03:00 [92232] ZB Fara rx on=1 hue=158 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:03:48.352+03:00 [92233] ZB Fara rx on=1 hue=158 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:03:48.453+03:00 [92334] ZB Fara rx on=1 hue=95 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:03:48.453+03:00 [92334] ZB Fara rx on=1 hue=95 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:03:48.503+03:00 [92382] ZB Fara on=1 hue=95 sat=243 val=107 -> mode=2 master=107 sB0=107
+2026-09-06T16:03:48.503+03:00 [92382] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=95 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:03:48.503+03:00 [92383] EP14 HS report h=95 s=243 status=0,0
+2026-09-06T16:03:48.521+03:00 [92402] EP14 RX src=0000/1 cl=0300 len=5 zcl=00200b0a00
+2026-09-06T16:03:48.535+03:00 [92416] EP14 RX src=0000/1 cl=0300 len=5 zcl=00210b0a00
+2026-09-06T16:03:48.901+03:00 [92782] ZB report lamps on=0xF bri=107,107,107,107  fara mode=2 master=107
+2026-09-06T16:03:50.801+03:00 [94682] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=95 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:05:27.380+03:00 [191261] EP14 RX src=0000/1 cl=0300 len=9 zcl=01ea069ef300000101
+2026-09-06T16:05:27.381+03:00 [191262] ZB Fara rx on=1 hue=95 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:05:27.381+03:00 [191263] ZB Fara rx on=1 hue=95 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:05:27.482+03:00 [191363] ZB Fara rx on=1 hue=158 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:05:27.482+03:00 [191364] ZB Fara rx on=1 hue=158 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:05:27.530+03:00 [191412] ZB Fara on=1 hue=158 sat=243 val=107 -> mode=4 master=107 sB0=107
+2026-09-06T16:05:27.531+03:00 [191412] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=158 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:05:27.531+03:00 [191413] EP14 HS report h=158 s=243 status=0,0
+2026-09-06T16:05:27.552+03:00 [191433] EP14 RX src=0000/1 cl=0300 len=5 zcl=00220b0a00
+2026-09-06T16:05:27.566+03:00 [191447] EP14 RX src=0000/1 cl=0300 len=5 zcl=00230b0a00
+2026-09-06T16:05:27.931+03:00 [191812] ZB report lamps on=0xF bri=107,107,107,107  fara mode=4 master=107
+2026-09-06T16:05:29.831+03:00 [193712] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=158 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:05:48.877+03:00 [212758] EP14 RX src=0000/1 cl=0300 len=9 zcl=01eb065ff300000101
+2026-09-06T16:05:48.879+03:00 [212760] ZB Fara rx on=1 hue=158 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:05:48.879+03:00 [212760] ZB Fara rx on=1 hue=158 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:05:48.980+03:00 [212861] ZB Fara rx on=1 hue=95 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:05:48.980+03:00 [212862] ZB Fara rx on=1 hue=95 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:05:49.029+03:00 [212910] ZB Fara on=1 hue=95 sat=243 val=107 -> mode=2 master=107 sB0=107
+2026-09-06T16:05:49.030+03:00 [212911] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=95 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:05:49.032+03:00 [212913] EP14 HS report h=95 s=243 status=0,0
+2026-09-06T16:05:49.053+03:00 [212934] EP14 RX src=0000/1 cl=0300 len=5 zcl=00240b0a00
+2026-09-06T16:05:49.066+03:00 [212948] EP14 RX src=0000/1 cl=0300 len=5 zcl=00250b0a00
+2026-09-06T16:05:49.429+03:00 [213310] ZB report lamps on=0xF bri=107,107,107,107  fara mode=2 master=107
+2026-09-06T16:05:51.329+03:00 [215210] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=95 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:06:08.308+03:00 [232189] EP14 RX src=0000/1 cl=0300 len=9 zcl=01ec0600f300000101
+2026-09-06T16:06:08.309+03:00 [232191] ZB Fara rx on=1 hue=95 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:08.309+03:00 [232191] ZB Fara rx on=1 hue=95 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:08.410+03:00 [232291] ZB Fara rx on=1 hue=0 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:08.410+03:00 [232292] ZB Fara rx on=1 hue=0 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:08.460+03:00 [232341] ZB Fara on=1 hue=0 sat=243 val=107 -> mode=1 master=107 sB0=107
+2026-09-06T16:06:08.460+03:00 [232341] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=0 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:06:08.460+03:00 [232342] EP14 HS report h=0 s=243 status=0,0
+2026-09-06T16:06:08.482+03:00 [232364] EP14 RX src=0000/1 cl=0300 len=5 zcl=00260b0a00
+2026-09-06T16:06:08.496+03:00 [232378] EP14 RX src=0000/1 cl=0300 len=5 zcl=00270b0a00
+2026-09-06T16:06:08.860+03:00 [232741] ZB report lamps on=0xF bri=107,107,107,107  fara mode=1 master=107
+2026-09-06T16:06:10.760+03:00 [234641] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=0 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:06:18.531+03:00 [242412] EP14 RX src=0000/1 cl=0300 len=9 zcl=01ed065ff300000101
+2026-09-06T16:06:18.532+03:00 [242414] ZB Fara rx on=1 hue=0 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:18.533+03:00 [242414] ZB Fara rx on=1 hue=0 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:18.634+03:00 [242515] ZB Fara rx on=1 hue=95 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:18.634+03:00 [242516] ZB Fara rx on=1 hue=95 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:18.683+03:00 [242564] ZB Fara on=1 hue=95 sat=243 val=107 -> mode=2 master=107 sB0=107
+2026-09-06T16:06:18.683+03:00 [242564] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=95 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:06:18.683+03:00 [242565] EP14 HS report h=95 s=243 status=0,0
+2026-09-06T16:06:18.705+03:00 [242586] EP14 RX src=0000/1 cl=0300 len=5 zcl=00280b0a00
+2026-09-06T16:06:18.718+03:00 [242600] EP14 RX src=0000/1 cl=0300 len=5 zcl=00290b0a00
+2026-09-06T16:06:19.083+03:00 [242964] ZB report lamps on=0xF bri=107,107,107,107  fara mode=2 master=107
+2026-09-06T16:06:20.983+03:00 [244864] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=95 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:06:31.464+03:00 [255345] EP14 RX src=0000/1 cl=0300 len=9 zcl=01ee067cf300000101
+2026-09-06T16:06:31.465+03:00 [255347] ZB Fara rx on=1 hue=95 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:31.466+03:00 [255347] ZB Fara rx on=1 hue=95 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:31.567+03:00 [255448] ZB Fara rx on=1 hue=124 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:31.567+03:00 [255449] ZB Fara rx on=1 hue=124 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:31.616+03:00 [255497] ZB Fara on=1 hue=124 sat=243 val=107 -> mode=3 master=107 sB0=107
+2026-09-06T16:06:31.616+03:00 [255497] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=124 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:06:31.616+03:00 [255498] EP14 HS report h=124 s=243 status=0,0
+2026-09-06T16:06:31.641+03:00 [255522] EP14 RX src=0000/1 cl=0300 len=5 zcl=002a0b0a00
+2026-09-06T16:06:31.655+03:00 [255536] EP14 RX src=0000/1 cl=0300 len=5 zcl=002b0b0a00
+2026-09-06T16:06:32.016+03:00 [255897] ZB report lamps on=0xF bri=107,107,107,107  fara mode=3 master=107
+2026-09-06T16:06:33.917+03:00 [257798] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=124 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:06:38.605+03:00 [262487] EP14 RX src=0000/1 cl=0300 len=9 zcl=01ef069ef300000101
+2026-09-06T16:06:38.607+03:00 [262488] ZB Fara rx on=1 hue=124 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:38.607+03:00 [262488] ZB Fara rx on=1 hue=124 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:38.708+03:00 [262589] ZB Fara rx on=1 hue=158 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:38.708+03:00 [262590] ZB Fara rx on=1 hue=158 sat=243 val=107 (lvl now, hs latched)
+2026-09-06T16:06:38.757+03:00 [262638] ZB Fara on=1 hue=158 sat=243 val=107 -> mode=4 master=107 sB0=107
+2026-09-06T16:06:38.757+03:00 [262639] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=158 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:06:38.760+03:00 [262641] EP14 HS report h=158 s=243 status=0,0
+2026-09-06T16:06:38.779+03:00 [262661] EP14 RX src=0000/1 cl=0300 len=5 zcl=002c0b0a00
+2026-09-06T16:06:38.793+03:00 [262674] EP14 RX src=0000/1 cl=0300 len=5 zcl=002d0b0a00
+2026-09-06T16:06:39.157+03:00 [263038] ZB report lamps on=0xF bri=107,107,107,107  fara mode=4 master=107
+2026-09-06T16:06:41.057+03:00 [264938] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=158 s=243 x=24939 y=24701 ct=250 on=1 level=107 (-1=missing/type)
+2026-09-06T16:06:41.488+03:00 [265368] EP14 RX src=0000/1 cl=0008 len=8 zcl=01f000a70a000101
+2026-09-06T16:06:41.489+03:00 [265368] ZB Fara rx on=1 hue=158 sat=243 val=113 (lvl now, hs latched)
+2026-09-06T16:06:41.529+03:00 [265411] EP14 RX src=0000/1 cl=0008 len=5 zcl=002e0b0a00
+2026-09-06T16:06:41.588+03:00 [265469] ZB Fara rx on=1 hue=158 sat=243 val=119 (lvl now, hs latched)
+2026-09-06T16:06:41.638+03:00 [265519] ZB Fara on=1 hue=158 sat=243 val=119 -> mode=4 master=119 sB0=107
+2026-09-06T16:06:41.639+03:00 [265519] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=158 s=243 x=24939 y=24701 ct=250 on=1 level=119 (-1=missing/type)
+2026-09-06T16:06:41.689+03:00 [265570] ZB Fara rx on=1 hue=158 sat=243 val=125 (lvl now, hs latched)
+2026-09-06T16:06:41.790+03:00 [265671] ZB Fara rx on=1 hue=158 sat=243 val=131 (lvl now, hs latched)
+2026-09-06T16:06:41.839+03:00 [265720] ZB Fara on=1 hue=158 sat=243 val=131 -> mode=4 master=131 sB0=107
+2026-09-06T16:06:41.839+03:00 [265720] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=158 s=243 x=24939 y=24701 ct=250 on=1 level=131 (-1=missing/type)
+2026-09-06T16:06:41.891+03:00 [265772] ZB Fara rx on=1 hue=158 sat=243 val=137 (lvl now, hs latched)
+2026-09-06T16:06:41.992+03:00 [265873] ZB Fara rx on=1 hue=158 sat=243 val=143 (lvl now, hs latched)
+2026-09-06T16:06:42.042+03:00 [265923] ZB Fara on=1 hue=158 sat=243 val=143 -> mode=4 master=143 sB0=107
+2026-09-06T16:06:42.042+03:00 [265923] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=158 s=243 x=24939 y=24701 ct=250 on=1 level=143 (-1=missing/type)
+2026-09-06T16:06:42.093+03:00 [265974] ZB Fara rx on=1 hue=158 sat=243 val=149 (lvl now, hs latched)
+2026-09-06T16:06:42.194+03:00 [266075] ZB Fara rx on=1 hue=158 sat=243 val=155 (lvl now, hs latched)
+2026-09-06T16:06:42.242+03:00 [266124] ZB Fara on=1 hue=158 sat=243 val=155 -> mode=4 master=155 sB0=107
+2026-09-06T16:06:42.243+03:00 [266124] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=158 s=243 x=24939 y=24701 ct=250 on=1 level=155 (-1=missing/type)
+2026-09-06T16:06:42.295+03:00 [266176] ZB Fara rx on=1 hue=158 sat=243 val=161 (lvl now, hs latched)
+2026-09-06T16:06:42.396+03:00 [266277] ZB Fara rx on=1 hue=158 sat=243 val=167 (lvl now, hs latched)
+2026-09-06T16:06:42.446+03:00 [266326] ZB Fara on=1 hue=158 sat=243 val=167 -> mode=4 master=167 sB0=107
+2026-09-06T16:06:42.446+03:00 [266326] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=158 s=243 x=24939 y=24701 ct=250 on=1 level=167 (-1=missing/type)
+2026-09-06T16:06:42.507+03:00 [266389] EP14 RX src=0000/1 cl=0008 len=5 zcl=002f0b0a00
+2026-09-06T16:06:42.799+03:00 [266679] ZB report lamps on=0xF bri=107,107,107,107  fara mode=4 master=167
+2026-09-06T16:06:44.745+03:00 [268626] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=158 s=243 x=24939 y=24701 ct=250 on=1 level=167 (-1=missing/type)
+2026-09-06T16:06:48.675+03:00 [272556] EP14 RX src=0000/1 cl=0300 len=9 zcl=01f106d7f300000101
+2026-09-06T16:06:48.676+03:00 [272557] ZB Fara rx on=1 hue=158 sat=243 val=167 (lvl now, hs latched)
+2026-09-06T16:06:48.676+03:00 [272558] ZB Fara rx on=1 hue=158 sat=243 val=167 (lvl now, hs latched)
+2026-09-06T16:06:48.777+03:00 [272658] ZB Fara rx on=1 hue=215 sat=243 val=167 (lvl now, hs latched)
+2026-09-06T16:06:48.777+03:00 [272659] ZB Fara rx on=1 hue=215 sat=243 val=167 (lvl now, hs latched)
+2026-09-06T16:06:48.826+03:00 [272707] ZB Fara on=1 hue=215 sat=243 val=167 -> mode=5 master=167 sB0=107
+2026-09-06T16:06:48.827+03:00 [272708] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=215 s=243 x=24939 y=24701 ct=250 on=1 level=167 (-1=missing/type)
+2026-09-06T16:06:48.829+03:00 [272710] EP14 HS report h=215 s=243 status=0,0
+2026-09-06T16:06:48.846+03:00 [272727] EP14 RX src=0000/1 cl=0300 len=5 zcl=00300b0a00
+2026-09-06T16:06:48.883+03:00 [272764] EP14 RX src=0000/1 cl=0300 len=5 zcl=00310b0a00
+2026-09-06T16:06:49.226+03:00 [273107] ZB report lamps on=0xF bri=107,107,107,107  fara mode=5 master=167
+2026-09-06T16:06:50.138+03:00 [274019] EP14 RX src=0000/1 cl=0008 len=8 zcl=01f200810a000101
+2026-09-06T16:06:50.138+03:00 [274020] ZB Fara rx on=1 hue=215 sat=243 val=164 (lvl now, hs latched)
+2026-09-06T16:06:50.163+03:00 [274045] EP14 RX src=0000/1 cl=0008 len=5 zcl=00320b0a00
+2026-09-06T16:06:50.240+03:00 [274121] ZB Fara rx on=1 hue=215 sat=243 val=161 (lvl now, hs latched)
+2026-09-06T16:06:50.289+03:00 [274170] ZB Fara on=1 hue=215 sat=243 val=161 -> mode=5 master=161 sB0=107
+2026-09-06T16:06:50.289+03:00 [274171] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=215 s=243 x=24939 y=24701 ct=250 on=1 level=161 (-1=missing/type)
+2026-09-06T16:06:50.341+03:00 [274222] ZB Fara rx on=1 hue=215 sat=243 val=157 (lvl now, hs latched)
+2026-09-06T16:06:50.442+03:00 [274323] ZB Fara rx on=1 hue=215 sat=243 val=153 (lvl now, hs latched)
+2026-09-06T16:06:50.491+03:00 [274372] ZB Fara on=1 hue=215 sat=243 val=153 -> mode=5 master=153 sB0=107
+2026-09-06T16:06:50.491+03:00 [274372] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=215 s=243 x=24939 y=24701 ct=250 on=1 level=153 (-1=missing/type)
+2026-09-06T16:06:50.543+03:00 [274424] ZB Fara rx on=1 hue=215 sat=243 val=149 (lvl now, hs latched)
+2026-09-06T16:06:50.644+03:00 [274525] ZB Fara rx on=1 hue=215 sat=243 val=145 (lvl now, hs latched)
+2026-09-06T16:06:50.693+03:00 [274574] ZB Fara on=1 hue=215 sat=243 val=145 -> mode=5 master=145 sB0=107
+2026-09-06T16:06:50.693+03:00 [274574] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=215 s=243 x=24939 y=24701 ct=250 on=1 level=145 (-1=missing/type)
+2026-09-06T16:06:50.745+03:00 [274626] ZB Fara rx on=1 hue=215 sat=243 val=141 (lvl now, hs latched)
+2026-09-06T16:06:50.846+03:00 [274727] ZB Fara rx on=1 hue=215 sat=243 val=137 (lvl now, hs latched)
+2026-09-06T16:06:50.895+03:00 [274776] ZB Fara on=1 hue=215 sat=243 val=137 -> mode=5 master=137 sB0=107
+2026-09-06T16:06:50.896+03:00 [274776] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=215 s=243 x=24939 y=24701 ct=250 on=1 level=137 (-1=missing/type)
+2026-09-06T16:06:50.947+03:00 [274828] ZB Fara rx on=1 hue=215 sat=243 val=133 (lvl now, hs latched)
+2026-09-06T16:06:51.048+03:00 [274929] ZB Fara rx on=1 hue=215 sat=243 val=129 (lvl now, hs latched)
+2026-09-06T16:06:51.097+03:00 [274978] ZB Fara on=1 hue=215 sat=243 val=129 -> mode=5 master=129 sB0=107
+2026-09-06T16:06:51.097+03:00 [274978] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=215 s=243 x=24939 y=24701 ct=250 on=1 level=129 (-1=missing/type)
+2026-09-06T16:06:51.158+03:00 [275039] EP14 RX src=0000/1 cl=0008 len=5 zcl=00330b0a00
+2026-09-06T16:06:51.451+03:00 [275331] ZB report lamps on=0xF bri=107,107,107,107  fara mode=5 master=129
+2026-09-06T16:06:51.507+03:00 [275388] EP14 RX src=0000/1 cl=0008 len=8 zcl=01f300fe0a000101
+2026-09-06T16:06:51.507+03:00 [275389] ZB Fara rx on=1 hue=215 sat=243 val=141 (lvl now, hs latched)
+2026-09-06T16:06:51.608+03:00 [275489] ZB Fara rx on=1 hue=215 sat=243 val=153 (lvl now, hs latched)
+2026-09-06T16:06:51.658+03:00 [275539] ZB Fara on=1 hue=215 sat=243 val=153 -> mode=5 master=153 sB0=107
+2026-09-06T16:06:51.658+03:00 [275539] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=215 s=243 x=24939 y=24701 ct=250 on=1 level=153 (-1=missing/type)
+2026-09-06T16:06:51.709+03:00 [275590] ZB Fara rx on=1 hue=215 sat=243 val=165 (lvl now, hs latched)
+2026-09-06T16:06:51.810+03:00 [275691] ZB Fara rx on=1 hue=215 sat=243 val=177 (lvl now, hs latched)
+2026-09-06T16:06:51.859+03:00 [275740] ZB Fara on=1 hue=215 sat=243 val=177 -> mode=5 master=177 sB0=107
+2026-09-06T16:06:51.860+03:00 [275740] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=215 s=243 x=24939 y=24701 ct=250 on=1 level=177 (-1=missing/type)
+2026-09-06T16:06:51.911+03:00 [275792] ZB Fara rx on=1 hue=215 sat=243 val=189 (lvl now, hs latched)
+2026-09-06T16:06:52.012+03:00 [275893] ZB Fara rx on=1 hue=215 sat=243 val=202 (lvl now, hs latched)
+2026-09-06T16:06:52.061+03:00 [275942] ZB Fara on=1 hue=215 sat=243 val=202 -> mode=5 master=202 sB0=107
+2026-09-06T16:06:52.061+03:00 [275942] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=215 s=243 x=24939 y=24701 ct=250 on=1 level=202 (-1=missing/type)
+2026-09-06T16:06:52.113+03:00 [275994] ZB Fara rx on=1 hue=215 sat=243 val=215 (lvl now, hs latched)
+2026-09-06T16:06:52.160+03:00 [276042] EP14 RX src=0000/1 cl=0008 len=5 zcl=00340b0a00
+2026-09-06T16:06:52.214+03:00 [276095] ZB Fara rx on=1 hue=215 sat=243 val=228 (lvl now, hs latched)
+2026-09-06T16:06:52.263+03:00 [276144] ZB Fara on=1 hue=215 sat=243 val=228 -> mode=5 master=228 sB0=107
+2026-09-06T16:06:52.264+03:00 [276145] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=215 s=243 x=24939 y=24701 ct=250 on=1 level=228 (-1=missing/type)
+2026-09-06T16:06:52.315+03:00 [276196] ZB Fara rx on=1 hue=215 sat=243 val=241 (lvl now, hs latched)
+2026-09-06T16:06:52.416+03:00 [276297] ZB Fara rx on=1 hue=215 sat=243 val=254 (lvl now, hs latched)
+2026-09-06T16:06:52.465+03:00 [276346] ZB Fara on=1 hue=215 sat=243 val=254 -> mode=5 master=254 sB0=107
+2026-09-06T16:06:52.466+03:00 [276347] EP14 attrs settled: mode=0 enhanced=0 caps=1 h=215 s=243 x=24939 y=24701 ct=250 on=1 level=254 (-1=missing/type)
+2026-09-06T16:06:52.816+03:00 [276697] ZB report lamps on=0xF bri=107,107,107,107  fara mode=5 master=254
+2026-09-06T16:06:53.162+03:00 [277044] EP14 RX src=0000/1 cl=0008 len=5 zcl=00350b0a00
+2026-09-06T16:06:54.765+03:00 [278646] EP14 attrs +2300ms: mode=0 enhanced=0 caps=1 h=215 s=243 x=24939 y=24701 ct=250 on=1 level=254 (-1=missing/type)
+2026-09-06T16:16:57.013+03:00 CAPTURE STOP
