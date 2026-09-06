@@ -138,6 +138,27 @@ arduino-cli upload  -b "$FQBN" -p /dev/cu.usbmodemXXXX SmartLadaRevC
   re-pair**. Bumping `config::MAGIC` resets settings once on the next boot.
 - Zigbee-stack logs go to **UART0 (J8)**, not USB-CDC; on USB you only see the firmware's own
   `Serial.printf` (`ZB Fara/lamp ...`). Headless capture: `stdbuf -oL cat /dev/cu.usbmodemXXXX > log`.
+- **Opening the USB serial port resets the board** (it shows up as `rst USB` on the next boot
+  line), even with DTR/RTS cleared beforehand. So starting a capture reboots the device, and
+  the serial log cannot be watched during a BLE session at all -- the port open would kick the
+  board out of OTA mode.
+
+### Firmware over BLE
+
+No USB needed: **Settings -> System -> Update Over BLE -> Yes** reboots into a dedicated OTA
+mode (Zigbee is not started, so the radio is free) and advertises as `SmartLada`. Then
+
+```sh
+uv run --with bleak python3 tools/ble_ota.py path/to/SmartLadaRevC.ino.bin
+```
+
+- **Run this with the board on PD 12 V.** Powered from USB 5 V the transfer degrades to
+  ~6.5 KB/s and stalls partway through (`stalled (no ack)` -- the link stays up but the board
+  stops acknowledging blocks). On 12 V the same image goes through at 19-23 KB/s.
+- Any button leaves OTA mode. The exit only arms once every key has been released, so the
+  button held from the confirm screen does not immediately cancel.
+- A link lost *after* `FINISH` does not cancel the update: the image is complete by then and
+  only an explicit ABORT stops the commit. `--drop-after-finish` exercises exactly that.
 
 ## Status & roadmap
 
