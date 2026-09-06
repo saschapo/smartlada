@@ -41,6 +41,13 @@ const char* resetReason() {
     case ESP_RST_BROWNOUT: return "BROWNOUT";   // <- suspected cold-boot lamp-inrush reboot
     case ESP_RST_DEEPSLEEP:return "DEEPSLEEP";
     case ESP_RST_SDIO:     return "SDIO";
+    // The five below exist on the C6 and were all landing in "UNKNOWN", which made a real
+    // reset during a BLE transfer indistinguishable from a host-side USB reset.
+    case ESP_RST_USB:      return "USB";        // host reset us over USB-Serial/JTAG
+    case ESP_RST_JTAG:     return "JTAG";
+    case ESP_RST_EFUSE:    return "EFUSE";
+    case ESP_RST_PWR_GLITCH: return "PWRGLITCH";
+    case ESP_RST_CPU_LOCKUP: return "LOCKUP";   // double exception
     default:               return "UNKNOWN";
   }
 }
