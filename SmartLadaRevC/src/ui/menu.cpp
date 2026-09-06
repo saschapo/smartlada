@@ -485,7 +485,8 @@ static void renderInfo() {
   oled.setCursor(2, 34); oled.print(l);
   snprintf(l, sizeof(l), "VBUS %u.%uV %s", vb / 1000, (vb % 1000) / 100, power::good() ? "PD12" : "no12");
   oled.setCursor(2, 46); oled.print(l);
-  snprintf(l, sizeof(l), "rst %s #%lu", power::resetReason(), (unsigned long)g_bootCount);
+  snprintf(l, sizeof(l), "rst %s #%lu %s", power::resetReason(), (unsigned long)g_bootCount,
+           zb::colorFixActive() ? "fix" : "NOFIX");
   oled.setCursor(2, 58); oled.print(l);
 }
 

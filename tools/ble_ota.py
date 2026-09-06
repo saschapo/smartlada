@@ -27,6 +27,10 @@ async def main():
     ap.add_argument("--name", default="SmartLada")
     ap.add_argument("--token", default="0x5A5AA5A5")
     ap.add_argument("--scan", type=float, default=10.0)
+    ap.add_argument("--drop-after-finish", action="store_true",
+                    help="disconnect immediately after FINISH instead of waiting for the "
+                         "status notify. Tests that a link loss during the commit does NOT "
+                         "cancel the update: the device should still boot the new image.")
     a = ap.parse_args()
     token = int(a.token, 0)
 
@@ -92,6 +96,14 @@ async def main():
 
         # FINISH
         await cli.write_gatt_char(CTRL, struct.pack("<B", 0x02), response=True)
+        if a.drop_after_finish:
+            # The host normally holds the link until "done". Real hosts often just go away once
+            # every byte is sent, so the device must treat a disconnect while FINISH is pending
+            # as "commit anyway" -- only an explicit ABORT cancels.
+            print("dropping the link right after FINISH (device should still commit)")
+            await cli.disconnect()
+            print("disconnected; watch the board: it should reboot into the new firmware")
+            sys.exit(0)
         try:
             await asyncio.wait_for(done.wait(), timeout=15.0)
         except asyncio.TimeoutError:

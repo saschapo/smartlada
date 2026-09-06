@@ -26,25 +26,40 @@ static constexpr uint8_t SAT_THRESH = 40;   // saturation below this = white = n
 // is insufficient: the Zigbee stack has its own configured attribute reporting.
 // Attribute values and Read Attributes responses stay intact. Brightness, on/off and
 // other endpoints retain normal reporting. Local effect changes do not publish a color.
-static bool onApsIndication(esp_zb_apsde_data_ind_t ind) {
-  if (ind.status == 0 && ind.dst_endpoint == FARA_EP && ind.profile_id == 0x0104 &&
-      ind.cluster_id == ESP_ZB_ZCL_CLUSTER_ID_COLOR_CONTROL &&
-      ind.asdu && ind.asdu_length >= 3 && (ind.asdu[0] & 0x0b) == 0x01) {
-    for (uint16_t id = 0; id < 2; ++id) {  // CurrentHue, CurrentSaturation only
-      esp_zb_zcl_attr_location_info_t location = {};
-      location.endpoint_id = FARA_EP;
-      location.cluster_id = ESP_ZB_ZCL_CLUSTER_ID_COLOR_CONTROL;
-      location.cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE;
-      location.manuf_code = ESP_ZB_ZCL_ATTR_NON_MANUFACTURER_SPECIFIC;
-      location.attr_id = id;
-      // Stack callback already holds the Zigbee lock. Do not acquire it again.
-      const auto* reporting = esp_zb_zcl_find_reporting_info(location);
-      if (reporting && reporting->direction == ESP_ZB_ZCL_REPORT_DIRECTION_SEND &&
-          esp_zb_zcl_stop_attr_reporting(location) != ESP_OK)
-        Serial.printf("EP14: could not stop color reporting attr=%04x\n", id);
-    }
+static void stopColorReports() {
+  for (uint16_t id = 0; id < 2; ++id) {  // CurrentHue, CurrentSaturation only
+    esp_zb_zcl_attr_location_info_t location = {};
+    location.endpoint_id = FARA_EP;
+    location.cluster_id = ESP_ZB_ZCL_CLUSTER_ID_COLOR_CONTROL;
+    location.cluster_role = ESP_ZB_ZCL_CLUSTER_SERVER_ROLE;
+    location.manuf_code = ESP_ZB_ZCL_ATTR_NON_MANUFACTURER_SPECIFIC;
+    location.attr_id = id;
+    // Stack callback already holds the Zigbee lock. Do not acquire it again.
+    const auto* reporting = esp_zb_zcl_find_reporting_info(location);
+    if (reporting && reporting->direction == ESP_ZB_ZCL_REPORT_DIRECTION_SEND &&
+        esp_zb_zcl_stop_attr_reporting(location) != ESP_OK)
+      Serial.printf("EP14: could not stop color reporting attr=%04x\n", id);
   }
-  return zb_apsde_data_indication_handler(ind);
+}
+
+static bool onApsIndication(esp_zb_apsde_data_ind_t ind) {
+  const bool color = (ind.status == 0 && ind.dst_endpoint == FARA_EP && ind.profile_id == 0x0104 &&
+                      ind.cluster_id == ESP_ZB_ZCL_CLUSTER_ID_COLOR_CONTROL &&
+                      ind.asdu && ind.asdu_length >= 3);
+  // ZCL frame control: bits 0-1 frame type, bit 2 manufacturer-specific, bit 3 direction.
+  const bool colorCmd = color && (ind.asdu[0] & 0x0b) == 0x01;   // cluster cmd, client -> server
+  // Configure Reporting (general command 0x06) re-arms precisely what we stop, so stopping
+  // before the stack handles it would be undone -- that frame is serviced on the way OUT.
+  // asdu[2] is the command id only when no manufacturer code is present (bit 2 clear).
+  const bool cfgReport = color && (ind.asdu[0] & 0x0f) == 0x00 && ind.asdu[2] == 0x06;
+
+  if (colorCmd) stopColorReports();          // before the command updates the attributes
+  bool handled = zb_apsde_data_indication_handler(ind);
+  if (cfgReport) {
+    stopColorReports();                      // after the coordinator's request was applied
+    Serial.println("EP14: color reporting re-armed by the coordinator -> stopped again");
+  }
+  return handled;
 }
 
 // s_dirty is set from the Zigbee task and cleared from the loop -> volatile.
@@ -164,6 +179,32 @@ static void applyFara(bool state, uint8_t hue, uint8_t sat, uint8_t value) {
                 config::s.mode, config::s.master, config::s.staticBri[0]);
 }
 
+// Installing the hook needs the Zigbee lock, and a timeout there used to leave the firmware
+// running WITHOUT the workaround after one line on a serial port nobody reads -- i.e. the color
+// bug quietly returns for that boot. Keep retrying from update() until it takes, and surface
+// the state on the Statistics screen.
+static bool     s_fixOn = false;
+static uint32_t s_fixRetryAt = 0;
+static bool     s_fixWarned = false;
+
+static bool installColorFix() {
+  if (s_fixOn) return true;
+  if (!esp_zb_lock_acquire(pdMS_TO_TICKS(50))) {
+    if (!s_fixWarned) {                       // warn once, then keep trying quietly
+      s_fixWarned = true;
+      Serial.println("EP14: color-report workaround not installed yet (lock busy), retrying");
+    }
+    return false;
+  }
+  esp_zb_aps_data_indication_handler_register(onApsIndication);
+  esp_zb_lock_release();
+  s_fixOn = true;
+  Serial.println("EP14: Yandex color-report workaround enabled");
+  return true;
+}
+
+bool colorFixActive() { return s_fixOn; }
+
 bool begin() {
   Zigbee.setDebugMode(true);                 // raw ZCL logging on Serial for bring-up
   for (uint8_t i = 0; i < NUM_CH; i++) {
@@ -175,13 +216,7 @@ bool begin() {
   fara.setManufacturerAndModel("SmartLada", "Fara");
   Zigbee.addEndpoint(&fara);
   const bool ok = Zigbee.begin();             // ED mode (from the FQBN); join runs in background
-  if (ok) {
-    if (esp_zb_lock_acquire(pdMS_TO_TICKS(1000))) {
-      esp_zb_aps_data_indication_handler_register(onApsIndication);
-      esp_zb_lock_release();
-      Serial.println("EP14: Yandex color-report workaround enabled");
-    } else Serial.println("EP14: color-report workaround NOT installed (Zigbee lock timeout)");
-  }
+  if (ok) installColorFix();
   return ok;
 }
 
@@ -234,6 +269,10 @@ static void reportState(uint32_t nowMs) {
 }
 
 void update(uint32_t nowMs) {
+  if (!s_fixOn && (int32_t)(nowMs - s_fixRetryAt) >= 0) {   // rate-limited so a busy lock
+    s_fixRetryAt = nowMs + 500;                             // cannot stall the loop
+    installColorFix();
+  }
   // Apply a settled Fara color before reporting, so the report reflects the final pair.
   bool ready = false, st = false;
   uint8_t h = 0, sa = 0, v = 0;

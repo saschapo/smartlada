@@ -15,6 +15,7 @@ void update(uint32_t now);  // poll link state; flags dirty on connect/disconnec
 bool connected();           // true once joined a network
 bool consumeDirty();        // returns (and clears) whether network activity changed state
 void factoryReset();        // leave the network + erase Zigbee NVS, then reboot (== re-pair)
+bool colorFixActive();      // Yandex color-report workaround installed (see zigbee.cpp)
 
 // Network status (valid once connected(); 0/0xFFFF-ish before join).
 uint16_t panId();
