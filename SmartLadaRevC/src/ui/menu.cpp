@@ -7,6 +7,8 @@
 #include "../input/buttons.h"
 #include "../net/zigbee.h"
 #include "../net/bleota.h"
+#include "../net/wifinet.h"
+#include "qr.h"
 #include "../power/power.h"
 #include "../version.h"
 #include <Preferences.h>
@@ -20,8 +22,8 @@ namespace menu {
 
 enum Screen { SC_IDLE, SC_MENU, SC_MODE, SC_BRIGHT, SC_TIMINGS, SC_LAMP,
               SC_SETTINGS, SC_DISP, SC_NET, SC_INFO, SC_FACTORY, SC_FORCE,
-              SC_ZB, SC_ZBRP, SC_SYS, SC_FW };
-static constexpr uint8_t NSCREEN = 16;
+              SC_ZB, SC_ZBRP, SC_SYS, SC_FW, SC_QR };
+static constexpr uint8_t NSCREEN = 17;
 
 static Screen  screen = SC_IDLE;
 static Screen  modeReturn = SC_MENU;     // where Mode returns to (set on entry)
@@ -464,6 +466,60 @@ static void renderDisplay() {
   }
 }
 
+// Wi-Fi screen: three actions plus the live state, so the switch, the QR and the network
+// name are all visible without drilling further.
+static const char* NET_ITEMS[] = {"WiFi", "Show QR", "Forget Net"};
+static constexpr uint8_t NET_N = 3;
+
+static const char* netStateText() {
+  switch (wifinet::state()) {
+    case wifinet::CONNECTING: return "joining";
+    case wifinet::ONLINE:     return "online";
+    case wifinet::AP:         return "setup AP";
+    default:                  return "off";
+  }
+}
+
+static void renderNet() {
+  header("WiFi");
+  for (uint8_t i = 0; i < NET_N; i++) {
+    char v[10]; v[0] = 0;
+    if (i == 0) snprintf(v, sizeof(v), "%s", wifinet::enabled() ? "On" : "Off");
+    row(14 + i * 10, i == cursor, NET_ITEMS[i], v, false, 0);
+  }
+  oled.setFont(&dweep);
+  oled.setTextColor(SSD1306_WHITE);
+  char l[26];
+  const char* name = (wifinet::state() == wifinet::AP) ? wifinet::apSsid() : wifinet::staSsid();
+  snprintf(l, sizeof(l), "%s %s", netStateText(), name[0] ? name : "-");
+  oled.setCursor(2, 54); oled.print(l);
+  if (wifinet::state() == wifinet::ONLINE || wifinet::state() == wifinet::AP) {
+    snprintf(l, sizeof(l), "%s", wifinet::ip().toString().c_str());
+    oled.setCursor(2, 63); oled.print(l);
+  }
+}
+
+// Full-screen QR. In setup-AP mode it encodes the Wi-Fi join string, so a phone camera joins
+// the device's own network; once online it encodes the UI address instead.
+static void renderQr() {
+  char payload[80], cap[24];
+  bool joinMode = (wifinet::state() == wifinet::AP);
+  if (joinMode) {
+    qr::joinString(payload, sizeof(payload), wifinet::apSsid(), wifinet::apPass());
+    snprintf(cap, sizeof(cap), "%s", wifinet::apSsid());
+  } else {
+    snprintf(payload, sizeof(payload), "http://smartlada.local");
+    snprintf(cap, sizeof(cap), "smartlada.local");
+  }
+  oled.setFont(&dweep);
+  oled.setTextColor(SSD1306_WHITE);
+  oled.setCursor(2, 12); oled.print(joinMode ? "join:" : "open:");
+  oled.setCursor(2, 24); oled.print(cap);
+  if (joinMode) { oled.setCursor(2, 36); oled.print(wifinet::apPass()); }
+  oled.setCursor(2, 62); oled.print("* back");
+  if (!qr::draw(payload, 95, 32, 2)) printCentered("QR too long", 50);
+}
+
 static void renderStub(const char* t, const char* msg) {
   header(t);
   oled.setFont(&orp_medium);
@@ -567,7 +623,8 @@ void render() {
     case SC_LAMP:     renderLamp(); break;
     case SC_SETTINGS: renderSettings(); break;
     case SC_DISP:     renderDisplay(); break;
-    case SC_NET:      renderStub("WiFi", "SoftAP + QR: TODO"); break;
+    case SC_NET:      renderNet(); break;
+    case SC_QR:       renderQr(); break;
     case SC_INFO:     renderInfo(); break;
     case SC_FACTORY:  renderFactory(); break;
     case SC_FORCE:    renderForce(); break;
@@ -819,7 +876,18 @@ void update(uint32_t now) {
       break;
 
     case SC_NET:                              // WiFi is a top-level Settings item
-      if (back || ok) go(SC_SETTINGS);
+      if (up)   { cursor = (cursor + NET_N - 1) % NET_N; dirty = true; }
+      if (down) { cursor = (cursor + 1) % NET_N; dirty = true; }
+      if (ok) {
+        if (cursor == 0)      wifinet::enable(!wifinet::enabled());
+        else if (cursor == 1) go(SC_QR);
+        else                  wifinet::forget();
+        dirty = true;
+      }
+      if (back) go(SC_SETTINGS);
+      break;
+    case SC_QR:                               // full-screen QR; any key returns
+      if (back || ok || up || down) go(SC_NET);
       break;
     case SC_INFO:                             // Statistics lives under System
       if (back || ok) go(SC_SYS);

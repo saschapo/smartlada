@@ -23,6 +23,11 @@ Forked from `../SmartLadaRevB`; the `src/` layers are reused, plus a Zigbee laye
   - `EP14` "Fara" (`ZigbeeColorDimmableLight`) — the **effect layer and nothing else**:
     **color = effect selector**, **level = effect brightness**; **off and white both mean
     "no effect"**. EP14 never touches per-lamp levels.
+- **Wi-Fi + web UI** (off by default, switched on in Settings -> WiFi): joins a saved network,
+  or hosts a `SmartLada-XXXX` provisioning AP with a join QR on the OLED. Reachable at
+  `http://smartlada.local` in either mode; the page is served from flash, so a BLE OTA carries
+  it along and there is no filesystem image to upload. The browser is just another writer of
+  the same state as the menu and Zigbee.
 - Settings + effect timings persisted in NVS, and **restored on power-on**: any change —
   local or remote — is written once it has stopped moving for 4 s.
 

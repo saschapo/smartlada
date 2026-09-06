@@ -17,6 +17,8 @@
 #include <Zigbee.h>            // pulls the Zigbee library into the build (ED sdkconfig)
 #include "src/net/zigbee.h"
 #include "src/net/bleota.h"    // BLE firmware-OTA (advertised ONLY in the dedicated OTA boot mode)
+#include "src/net/wifinet.h"   // Wi-Fi station / provisioning AP (off unless enabled in the menu)
+#include "src/net/web.h"       // local web UI, served from flash (starts with Wi-Fi)
 
 // RTC_NOINIT, not RTC_DATA: .rtc.data is a load segment, so the bootloader restores it from the
 // image on every reset and only a deep-sleep wake preserves writes. .rtc_noinit is left alone,
@@ -72,6 +74,8 @@ void setup() {
   channels::setSoftMs(config::s.softMs);
   menu::begin();
   if (!zb::begin()) Serial.println("Zigbee start failed; running local-only");
+  wifinet::begin();                  // no-op unless Wi-Fi was left enabled
+  if (wifinet::enabled()) web::begin();
 
   Serial.printf("%s %s (%s) ready\n", FW_NAME, FW_VERSION, HW_REV);
 
@@ -125,6 +129,9 @@ void loop() {
   buttons::poll(now);
   menu::update(now);
   zb::update(now);
+  wifinet::update(now);
+  if (wifinet::enabled() && !web::running()) web::begin();   // menu switched Wi-Fi on
+  web::update(now);
   if (zb::consumeDirty()) menu::notifyExternalChange();   // Alice/Zigbee changed state
   config::tick(now);                 // restore-on-power-on: persist remote changes too
 
