@@ -225,10 +225,13 @@ void compute(uint8_t mode, uint32_t now, uint8_t master,
     return;
   }
 
-  // Static: each lamp at its own level, gated by lampOn. The static master (group dimmer /
-  // Fara-white / local idle) fans out into staticBri, so it is NOT scaled again here.
+  // Static: each lamp at its own level, gated by lampOn, then scaled by the master. The master
+  // is a CEILING, in the same spirit as Lamp Setup's Max Level: at 100% nothing changes, and
+  // lowering it pulls the whole picture down while the lamps keep their relative balance.
+  // (It applies in effect mode too, where render() already scaled by it.)
   for (uint8_t i = 0; i < 4; i++)
-    out[i] = (lampOn & (1 << i)) ? staticBri[i] : 0;
+    out[i] = (lampOn & (1 << i))
+             ? (uint8_t)(((uint16_t)staticBri[i] * master + 127) / 255) : 0;
 }
 
 const char* modeName(uint8_t mode) { return (mode == 0) ? "Static" : EFFECTS[mode - 1].name; }

@@ -2,41 +2,35 @@
 #include <Arduino.h>
 #include <IPAddress.h>
 
-// Wi-Fi layer, deliberately independent of Zigbee: the C6 libs are built with
-// CONFIG_SW_COEXIST_ENABLE, so both radios may run at once. Wi-Fi is OFF by default and is
-// switched on from the menu, which also acts as the fallback if coexistence misbehaves.
+// Wi-Fi layer. Which protocol owns the radio is radio::mode()'s decision, not ours -- see
+// radio.h for why they cannot share it.
 //
-// Credentials live in their own NVS keys (namespace "smartlada", keys wifi_*), NOT in the
-// config::Settings blob -- adding fields there changes its size and would wipe every user
-// setting on the next boot.
+// The lamp is access-point first: in a car there is no network to join, so the device hosts
+// its own ("fara_NNNN" by default, password "smartlada"), both editable and persisted. Station
+// credentials are still honoured if something stored them, which is what makes a bench setup
+// on a home network possible, but nothing in the UI sets them any more.
 //
-// No credentials, or a station that will not join, ends in provisioning AP mode: the device
-// hosts "SmartLada-XXXX", and the OLED shows a QR that joins it. Both modes register mDNS,
-// so http://smartlada.local reaches the web UI either way.
+// All of this lives in its own NVS keys, NOT in the config::Settings blob: that struct's size
+// is part of its validity check, so growing it would wipe every user setting on the next boot.
 namespace wifinet {
 
-enum State : uint8_t {
-  OFF,          // radio down (default)
-  CONNECTING,   // joining the saved network
-  ONLINE,       // joined, IP valid
-  AP,           // hosting the provisioning access point
-};
+enum State : uint8_t { OFF, CONNECTING, ONLINE, AP };
 
-void begin();                 // load settings; bring the radio up if it was left enabled
-void update(uint32_t now);    // drive reconnects / AP fallback; call every loop
+void begin();                 // bring the radio up (only called when radio::mode() == WIFI)
+void update(uint32_t now);
 
-void enable(bool on);         // menu switch; persisted
-bool enabled();
+bool  enabled();              // radio::mode() == WIFI
 State state();
 
-bool        haveCreds();
 const char* staSsid();        // saved station SSID ("" if none)
-const char* apSsid();         // this device's provisioning AP name
-const char* apPass();         // its password (stable, derived from the MAC)
-IPAddress   ip();             // STA address when ONLINE, AP address in AP mode
+const char* apSsid();         // this device's access point
+const char* apPass();
+uint8_t     apClients();      // stations currently associated (drives the QR swap)
+IPAddress   ip();
 int8_t      rssi();           // 0 unless ONLINE
 
-void setCreds(const char* ssid, const char* pass);  // persist + retry immediately
-void forget();                                      // drop creds, fall back to AP
+void setAp(const char* ssid, const char* pass);     // persist + restart the AP
+void setCreds(const char* ssid, const char* pass);  // station credentials, persist + retry
+void resetWifi();                                   // AP identity back to defaults, forget station
 
 }  // namespace wifinet

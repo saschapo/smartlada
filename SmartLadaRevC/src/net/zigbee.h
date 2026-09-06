@@ -17,6 +17,13 @@ bool consumeDirty();        // returns (and clears) whether network activity cha
 void factoryReset();        // leave the network + erase Zigbee NVS, then reboot (== re-pair)
 bool colorFixActive();      // Yandex color-report workaround installed (see zigbee.cpp)
 
+// Debug switch, persisted. The Arduino Zigbee stack has no clean shutdown, so this decides
+// whether begin() runs on the NEXT boot: setEnabled() stores the flag and reboots. Lets the
+// 2.4 GHz band be handed entirely to Wi-Fi while chasing a coexistence problem.
+bool enabledPref();          // the stored choice (what the NEXT boot will do)
+bool enabledOnThisBoot();    // whether begin() actually ran and the stack is live
+void setEnabled(bool on);
+
 // Network status (valid once connected(); 0/0xFFFF-ish before join).
 uint16_t panId();
 uint8_t  channel();

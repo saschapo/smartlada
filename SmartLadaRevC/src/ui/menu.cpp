@@ -8,6 +8,7 @@
 #include "../net/zigbee.h"
 #include "../net/bleota.h"
 #include "../net/wifinet.h"
+#include "../net/radio.h"
 #include "qr.h"
 #include "../power/power.h"
 #include "../version.h"
@@ -97,20 +98,6 @@ static void adjOff(int32_t& v, int dir, int m) {
   }
 }
 static uint8_t pct(int32_t v) { return (uint8_t)((v * 100 + 127) / 255); }
-
-// Static "master": the group dimmer fans out into per-lamp staticBri, so the local master
-// mirrors that -- it reads back as the average of the enabled lamps and, when adjusted,
-// fans out to all lamps (enabling them, since locally there is no separate group switch).
-static uint8_t staticAvg() {
-  int sum = 0, n = 0;
-  for (uint8_t i = 0; i < 4; i++)
-    if (config::s.lampOn & (1 << i)) { sum += config::s.staticBri[i]; n++; }
-  return n ? (uint8_t)(sum / n) : 0;
-}
-static void staticSetAll(uint8_t v) {
-  for (uint8_t i = 0; i < 4; i++) config::s.staticBri[i] = v;
-  config::s.lampOn = 0x0F;
-}
 
 // UP/DOWN adjust a 0..255 value in whole-percent steps; returns true if changed.
 static bool adjPctBtn(uint8_t& v, int m) {
@@ -230,8 +217,8 @@ static void renderIdle() {
   oled.setTextColor(SSD1306_WHITE);
   printCentered("brightness", 5);
 
-  // In static the brightness = overall lamp level (avg); in an effect = effect brightness.
-  uint8_t bri = (config::s.mode == 0) ? staticAvg() : config::s.master;
+  // One master for both layers: effect brightness, and a ceiling over the static picture.
+  uint8_t bri = config::s.master;
   char pcs[8]; snprintf(pcs, sizeof(pcs), "%u%%", pct(bri));
   oled.setFont(&orp_medium);
   oled.setTextSize(1);
@@ -296,7 +283,7 @@ static void renderBright() {
   }
   const char* lab[5] = {"1 Turn", "2 Marker", "3 Reverse", "4 Stop", "Master"};
   uint8_t val[5] = {config::s.staticBri[0], config::s.staticBri[1],
-                    config::s.staticBri[2], config::s.staticBri[3], staticAvg()};
+                    config::s.staticBri[2], config::s.staticBri[3], config::s.master};
   for (uint8_t i = 0; i < 5; i++) {
     char v[6]; snprintf(v, sizeof(v), "%u", pct(val[i]));
     row(14 + i * 10, i == cursor, lab[i], v, true, val[i]);   // default barX=62, barW=47
@@ -468,7 +455,7 @@ static void renderDisplay() {
 
 // Wi-Fi screen: three actions plus the live state, so the switch, the QR and the network
 // name are all visible without drilling further.
-static const char* NET_ITEMS[] = {"WiFi", "Show QR", "Forget Net"};
+static const char* NET_ITEMS[] = {"WiFi", "Show QR", "WiFi Reset"};
 static constexpr uint8_t NET_N = 3;
 
 static const char* netStateText() {
@@ -503,13 +490,15 @@ static void renderNet() {
 // the device's own network; once online it encodes the UI address instead.
 static void renderQr() {
   char payload[80], cap[24];
-  bool joinMode = (wifinet::state() == wifinet::AP);
+  // Once a phone is associated the join code is useless -- show the address to open instead.
+  bool joinMode = (wifinet::state() == wifinet::AP) && (wifinet::apClients() == 0);
   if (joinMode) {
     qr::joinString(payload, sizeof(payload), wifinet::apSsid(), wifinet::apPass());
     snprintf(cap, sizeof(cap), "%s", wifinet::apSsid());
   } else {
-    snprintf(payload, sizeof(payload), "http://smartlada.local");
-    snprintf(cap, sizeof(cap), "smartlada.local");
+    IPAddress a = wifinet::ip();
+    snprintf(payload, sizeof(payload), "http://%s", a.toString().c_str());
+    snprintf(cap, sizeof(cap), "%s", a.toString().c_str());
   }
   oled.setFont(&dweep);
   oled.setTextColor(SSD1306_WHITE);
@@ -547,25 +536,37 @@ static void renderInfo() {
 }
 
 // Zigbee network status + re-pair entry.
+// Two rows: the debug switch (takes effect on reboot -- the stack has no clean shutdown) and
+// re-pair. Status fills the rest of the screen.
+static const char* ZB_ITEMS[] = {"Zigbee", "Re-pair"};
+static constexpr uint8_t ZB_N = 2;
+
 static void renderZb() {
   header("Zigbee");
+  for (uint8_t i = 0; i < ZB_N; i++) {
+    char v[8]; v[0] = 0;
+    if (i == 0) snprintf(v, sizeof(v), "%s", zb::enabledPref() ? "On" : "Off");
+    row(14 + i * 10, i == cursor, ZB_ITEMS[i], v, false, 0);
+  }
   oled.setFont(&dweep);
   oled.setTextSize(1);
   oled.setTextColor(SSD1306_WHITE);
   char l[24];
+  if (!zb::enabledOnThisBoot()) {
+    oled.setCursor(2, 46); oled.print("stack off this boot");
+    oled.setCursor(2, 56); oled.print("radio free for wifi");
+    return;
+  }
   bool up = zb::connected();
-  oled.setCursor(2, 20); oled.print(up ? "state: joined" : "state: joining...");
+  oled.setCursor(2, 40); oled.print(up ? "state: joined" : "state: joining...");
   if (up) {
-    snprintf(l, sizeof(l), "PAN 0x%04X  ch %u", zb::panId(), zb::channel());
-    oled.setCursor(2, 30); oled.print(l);
-    snprintf(l, sizeof(l), "addr 0x%04X", zb::shortAddr());
-    oled.setCursor(2, 40); oled.print(l);
+    snprintf(l, sizeof(l), "PAN 0x%04X ch%u a%04X", zb::panId(), zb::channel(), zb::shortAddr());
+    oled.setCursor(2, 50); oled.print(l);
     uint8_t lqi; int8_t rssi; uint16_t par;
     if (zb::parentLink(lqi, rssi, par)) snprintf(l, sizeof(l), "LQI %u  RSSI %ddBm", lqi, rssi);
     else                                strcpy(l, "LQI --  RSSI --");
-    oled.setCursor(2, 50); oled.print(l);
+    oled.setCursor(2, 60); oled.print(l);
   }
-  oled.setCursor(2, 62); oled.print("#: re-pair");
 }
 
 static void renderFwConfirm() {
@@ -691,13 +692,8 @@ void update(uint32_t now) {
   int m = accelMult();
 
   switch (screen) {
-    case SC_IDLE:
-      if (config::s.mode == 0) {                 // static: brightness = overall lamp level (fan-out)
-        uint8_t v = staticAvg();
-        if (adjPctBtn(v, m)) { staticSetAll(v); pendingSave = true; dirty = true; }
-      } else {                                    // effect: brightness = effect master
-        if (adjPctBtn(config::s.master, m)) { pendingSave = true; dirty = true; }
-      }
+    case SC_IDLE:                              // one master in both layers (a ceiling in static)
+      if (adjPctBtn(config::s.master, m)) { pendingSave = true; dirty = true; }
       if (ok)   go(SC_MENU);
       if (back) { modeReturn = SC_IDLE; go(SC_MODE); }   // *:FX (returns to idle)
       break;
@@ -733,9 +729,8 @@ void update(uint32_t now) {
             config::s.lampOn |= (1 << cursor);               // editing a channel enables it
             pendingSave = true; dirty = true;
           }
-        } else {                                             // Master row = fan-out to all lamps
-          uint8_t v = staticAvg();
-          if (adjPctBtn(v, m)) { staticSetAll(v); pendingSave = true; dirty = true; }
+        } else {                                             // Master row = the ceiling
+          if (adjPctBtn(config::s.master, m)) { pendingSave = true; dirty = true; }
         }
         if (ok || back) { editing = false; dirty = true; }
       }
@@ -879,9 +874,11 @@ void update(uint32_t now) {
       if (up)   { cursor = (cursor + NET_N - 1) % NET_N; dirty = true; }
       if (down) { cursor = (cursor + 1) % NET_N; dirty = true; }
       if (ok) {
-        if (cursor == 0)      wifinet::enable(!wifinet::enabled());
+        // Turning Wi-Fi on hands the radio over and reboots; turning it off gives it back to
+        // Zigbee. There is no "both" -- see radio.h.
+        if (cursor == 0)      radio::setMode(wifinet::enabled() ? radio::ZIGBEE : radio::WIFI);
         else if (cursor == 1) go(SC_QR);
-        else                  wifinet::forget();
+        else                  wifinet::resetWifi();   // AP name/password back to defaults
         dirty = true;
       }
       if (back) go(SC_SETTINGS);
@@ -910,8 +907,13 @@ void update(uint32_t now) {
       break;
 
     case SC_ZB:
+      if (up)   { cursor = (cursor + ZB_N - 1) % ZB_N; dirty = true; }
+      if (down) { cursor = (cursor + 1) % ZB_N; dirty = true; }
+      if (ok) {
+        if (cursor == 0) zb::setEnabled(!zb::enabledPref());   // stores + reboots
+        else             go(SC_ZBRP);
+      }
       if (back) go(SC_SETTINGS);
-      if (ok)   go(SC_ZBRP);          // # -> re-pair confirm
       break;
 
     case SC_ZBRP:

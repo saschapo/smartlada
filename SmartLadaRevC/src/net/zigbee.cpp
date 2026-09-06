@@ -8,6 +8,8 @@
 #include "../fx/effects.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include <Preferences.h>
+#include "radio.h"
 
 // Arduino-ESP32 3.3.10 uses this APS hook to maintain its binding list. Our wrapper
 // must always chain it; returning early would bypass normal Arduino processing.
@@ -205,6 +207,16 @@ static bool installColorFix() {
 
 bool colorFixActive() { return s_fixOn; }
 
+// Set once begin() has actually brought the stack up. Everything that would call into the
+// stack -- update(), the status screen, re-pair -- must check this, or a disabled boot
+// would query a stack that was never started.
+static bool s_live = false;
+bool enabledOnThisBoot() { return s_live; }
+
+bool enabledPref() { return radio::mode() == radio::ZIGBEE; }
+
+void setEnabled(bool on) { radio::setMode(on ? radio::ZIGBEE : radio::WIFI); }
+
 bool begin() {
   Zigbee.setDebugMode(true);                 // raw ZCL logging on Serial for bring-up
   for (uint8_t i = 0; i < NUM_CH; i++) {
@@ -216,7 +228,7 @@ bool begin() {
   fara.setManufacturerAndModel("SmartLada", "Fara");
   Zigbee.addEndpoint(&fara);
   const bool ok = Zigbee.begin();             // ED mode (from the FQBN); join runs in background
-  if (ok) installColorFix();
+  if (ok) { s_live = true; installColorFix(); }
   return ok;
 }
 
@@ -294,16 +306,16 @@ void update(uint32_t nowMs) {
   reportState(nowMs);
 }
 
-bool connected()    { return Zigbee.connected(); }
+bool connected()    { return s_live && Zigbee.connected(); }
 bool consumeDirty() { bool d = s_dirty; s_dirty = false; return d; }
-void factoryReset() { Zigbee.factoryReset(); }   // erases Zigbee NVS + reboots
+void factoryReset() { if (s_live) Zigbee.factoryReset(); }   // erases Zigbee NVS + reboots
 
 uint16_t panId()     { return esp_zb_get_pan_id(); }
 uint8_t  channel()   { return esp_zb_get_current_channel(); }
 uint16_t shortAddr() { return esp_zb_get_short_address(); }
 
 bool parentLink(uint8_t& lqi, int8_t& rssi, uint16_t& parentAddr) {
-  if (!Zigbee.connected()) return false;
+  if (!connected()) return false;
   bool found = false;
   if (esp_zb_lock_acquire(pdMS_TO_TICKS(10))) {     // short, non-stalling
     esp_zb_nwk_info_iterator_t it = ESP_ZB_NWK_INFO_ITERATOR_INIT;

@@ -17,8 +17,10 @@
 #include <Zigbee.h>            // pulls the Zigbee library into the build (ED sdkconfig)
 #include "src/net/zigbee.h"
 #include "src/net/bleota.h"    // BLE firmware-OTA (advertised ONLY in the dedicated OTA boot mode)
-#include "src/net/wifinet.h"   // Wi-Fi station / provisioning AP (off unless enabled in the menu)
+#include "src/net/radio.h"     // which protocol owns the single 2.4 GHz radio
+#include "src/net/wifinet.h"   // Wi-Fi access point / station (only when radio == WIFI)
 #include "src/net/web.h"       // local web UI, served from flash (starts with Wi-Fi)
+#include "src/log/eventlog.h"  // event log on LittleFS, downloadable from the web UI
 
 // RTC_NOINIT, not RTC_DATA: .rtc.data is a load segment, so the bootloader restores it from the
 // image on every reset and only a deep-sleep wake preserves writes. .rtc_noinit is left alone,
@@ -45,6 +47,7 @@ void setup() {
   g_bootCount++;
   if (g_otaReq == bleota::OTA_REQ_MAGIC) { g_otaReq = 0; g_otaMode = true; }
 
+  evlog::begin();                    // before anything worth recording
   bool haveOled = display::begin();
   config::load();
   display::setBrightness(config::s.dispBri);
@@ -64,18 +67,25 @@ void setup() {
 
   // Boot diagnostics. A cold boot with lamps on the +12V/VBUS rail can brown out the
   // ESP (shared rail); a climbing bootCount + reset="BROWNOUT" confirms that reboot loop.
-  Serial.printf("[boot #%lu] reset=%s VBUS=%umV PD12V=%d dieTemp=%.1fC\n",
-                (unsigned long)g_bootCount, power::resetReason(),
-                power::vbusMv(), power::good() ? 1 : 0, temperatureRead());
+  LOGI("boot", "#%lu reset=%s VBUS=%umV PD12V=%d dieTemp=%.1fC fw=%s",
+       (unsigned long)g_bootCount, power::resetReason(),
+       power::vbusMv(), power::good() ? 1 : 0, temperatureRead(), FW_VERSION);
 
   fx::loadParams();                  // effect timings from NVS (defaults if absent)
   channels::setFreq(config::s.pwmFreq);
   channels::setCalib(config::s.gammaX10, config::s.minLvl, config::s.maxLvl);
   channels::setSoftMs(config::s.softMs);
   menu::begin();
-  if (!zb::begin()) Serial.println("Zigbee start failed; running local-only");
-  wifinet::begin();                  // no-op unless Wi-Fi was left enabled
-  if (wifinet::enabled()) web::begin();
+  // One radio, one owner. Coexistence is compiled in, but a phone could not join the AP with
+  // the Zigbee stack up, so the band is handed to exactly one protocol per boot.
+  if (radio::mode() == radio::ZIGBEE) {
+    if (!zb::begin()) LOGE("zb", "stack failed to start; running local-only");
+    else              LOGI("radio", "Zigbee mode");
+  } else {
+    LOGI("radio", "Wi-Fi mode, Zigbee stack not started");
+    wifinet::begin();
+    web::begin();
+  }
 
   Serial.printf("%s %s (%s) ready\n", FW_NAME, FW_VERSION, HW_REV);
 
@@ -128,9 +138,8 @@ void loop() {
 
   buttons::poll(now);
   menu::update(now);
-  zb::update(now);
+  if (zb::enabledOnThisBoot()) zb::update(now);
   wifinet::update(now);
-  if (wifinet::enabled() && !web::running()) web::begin();   // menu switched Wi-Fi on
   web::update(now);
   if (zb::consumeDirty()) menu::notifyExternalChange();   // Alice/Zigbee changed state
   config::tick(now);                 // restore-on-power-on: persist remote changes too
