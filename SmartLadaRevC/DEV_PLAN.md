@@ -30,16 +30,20 @@ loop: buttons -> menu -> [zigbee/wifi callbacks уже записали config::
 
 | EP | Тип | Роль |
 |----|-----|------|
-| 10..13 | `ZigbeeDimmableLight` | 4 лампы (Turn/Brake/Marker/Reverse): on/off + level |
-| 14 | `ZigbeeColorDimmableLight` «Fara» | on/off=питание фары; level=**master**; hue=**селектор эффекта** |
+| 10..13 | `ZigbeeDimmableLight` | 4 лампы (Turn/Marker/Reverse/Stop): on/off + level |
+| 14 | `ZigbeeColorDimmableLight` «Fara» | слой эффектов: hue=**селектор эффекта**, level=**яркость эффекта** |
 
-Правило приоритета (гвоздями):
+> **Правило приоритета ниже УСТАРЕЛО** (планировалось до реализации, дважды пересмотрено на
+> железе). Действующая модель — в `README.md`, раздел «Compositor / control model». Коротко:
+> `mode` один определяет слой; EP14 никогда не трогает `staticBri`; выкл и белый на EP14
+> значат одно — эффектов нет; групповая и поканальная яркость целиком на EP10-13.
+> Блок оставлен как история решения, а не как инструкция.
+
 ```
 master = Fara.on ? Fara.level/254 : 1.0
 Fara.on && насыщенный цвет  -> out[i] = кадр_эффекта[i] * master   (hue -> эффект)
 иначе (Fara off/белый)      -> out[i] = лампа[i] * master           (PASSTHROUGH: EP10..13 индивидуально)
 ```
-**Passthrough** = когда Fara выключена, 4 лампы управляются независимо своими EP10-13 (без мастера/эффекта). Оставляем.
 
 Готовая реализация всей этой логики (плоская, стендовая) — `sketches/RevCZigbeeFx/RevCZigbeeFx.ino`;
 переносим в модуль. Build: `ZigbeeMode=ed, PartitionScheme=zigbee_8MB, FlashSize=16M, CDCOnBoot=cdc`.
@@ -74,20 +78,22 @@ Fara.on && насыщенный цвет  -> out[i] = кадр_эффекта[i]
 
 ## Фазы
 
-- **Фаза 1 — билд/скелет.** Zigbee в билд `SmartLadaRevC` (FQBN выше). Проверить, что `config` NVS
+- **Фаза 1 — билд/скелет. СДЕЛАНО.** Zigbee в билд `SmartLadaRevC` (FQBN выше). Проверить, что `config` NVS
   живёт под zigbee-партицией. Вынести Zigbee в `src/net/zigbee.{h,cpp}` (тонкий слой). RF-риск от
   пропущенного EPAD WROOM — проверяем бесплатно при первом паринге (LQI/дальность).
-- **Фаза 2 — интеграция состояния.** Коллбэки Zigbee → `config::s`; изменения меню → report в Zigbee.
+- **Фаза 2 — интеграция состояния. СДЕЛАНО** (report-back EP14 без цвета — см. README). Коллбэки Zigbee → `config::s`; изменения меню → report в Zigbee.
   `fx::compute` как компоновщик. Карта hue→индекс эффекта (общая для hue-коллбэка и пункта «Mode»).
-- **Фаза 3 — меню под сеть.** Пункты `WiFi`/`WiFi QR` **оставить/доразвить** (провижн по QR, smartlada.local).
+- **Фаза 3 — меню под сеть. ЧАСТИЧНО:** экран Zigbee (статус/PAN/LQI/re-pair) есть,
+  WiFi-пункт заглушка, переключателя WiFi<->Zigbee нет. **Планировалось:** Пункты `WiFi`/`WiFi QR` **оставить/доразвить** (провижн по QR, smartlada.local).
   Добавить «Zigbee» (статус joined/PAN/LQI, Pair/Re-pair) и переключатель **WiFi ↔ Zigbee**.
   Статус сети на OLED (вместо NeoPixel). Factory-reset расширить на `Zigbee.factoryReset()`.
 - **Фаза 4 — PD-gating + debug-байпас. СДЕЛАНО 2026-09-05.** Гейтинг по **VBUS(IO4 ADC)** с
   гистерезисом (нет ~12В → каналы в 0 + «NO 12V» на idle) — VBUS надёжнее, чем PG, и не «блэкаутит»
   ложно на реальных 12В. Пункт меню **Settings → Force Out (on/off)** — байпас гейтинга для дебага по
   индикаторным LED на 5В без ламп. VBUS/PG/temp видны в Info. (PG=IO10 читается, показывается.)
-- **Фаза 5 — эффекты.** 2-3 стартовых (blink/chase/fade уже есть) на движок `fx::`; hue→эффект.
-- **Фаза 6 — WiFi/веб + персист.** Веб-UI из cineink (dark view, QR-провижн, mDNS). NVS-персист
+- **Фаза 5 — эффекты. СДЕЛАНО** (Breathe/Turn/Chase/Fade/Drive). 2-3 стартовых (blink/chase/fade уже есть) на движок `fx::`; hue→эффект.
+- **Фаза 6 — WiFi/веб + персист. ЧАСТИЧНО:** NVS-персист с дебаунсом сделан
+  (`config::tick`, restore при подаче питания); WiFi и веб-UI отложены сознательно. Веб-UI из cineink (dark view, QR-провижн, mDNS). NVS-персист
   состояния ламп с дебаунсом. Имена/rejoin (T-пункты чеклиста research/).
 
 ## Риски

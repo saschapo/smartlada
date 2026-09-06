@@ -14,12 +14,17 @@ Forked from `../SmartLadaRevB`; the `src/` layers are reused, plus a Zigbee laye
   effect timings, lamp calibration (gamma/soft-start/levels/PWM freq), display, factory reset.
 - **Effects**: Breathe, Turn (turn-signal-only blink, 1.5 Hz), Chase, Fade, Drive (a random
   but logical driving-scenario FSM: cruise/brake/stop/turn/reverse/hazard/parked).
+  **Chase** runs on a trigger clock: every `Step` a lamp is lit and runs its own
+  `Fade In -> On -> Fade Out` envelope, which may outlive later triggers — that overlap is
+  what makes lamps dissolve into each other. `Random` picks the next lamp instead of walking
+  in order (never the one just lit), turning the same envelope into scattered flicker.
 - **Zigbee end device** — five endpoints to Alice:
   - `EP10..13` — the four lamps by function: **Turn / Marker / Reverse / Stop** (`ZigbeeDimmableLight`).
-  - `EP14` "Fara" (`ZigbeeColorDimmableLight`) — the **effect layer**: **color = effect
-    selector**, **level = effect brightness**; **white** = static, its level fanning out as the
-    overall lamp brightness (like the group dimmer); off = static.
-- Settings + effect timings persisted in NVS.
+  - `EP14` "Fara" (`ZigbeeColorDimmableLight`) — the **effect layer and nothing else**:
+    **color = effect selector**, **level = effect brightness**; **off and white both mean
+    "no effect"**. EP14 never touches per-lamp levels.
+- Settings + effect timings persisted in NVS, and **restored on power-on**: any change —
+  local or remote — is written once it has stopped moving for 4 s.
 
 ## Architecture
 
@@ -52,10 +57,18 @@ static picture:
 
 - **Effect (mode ≠ 0)** → animation frame × `master` (effect brightness), across all 4 channels.
 - **Static (mode 0)** → per-channel `staticBri`, gated by `lampOn` — **no master scaling**.
-  The static "master" is the group dimmer (and Fara-white / local idle), which fans out into
+  The static "master" is the group dimmer (and the local idle screen), which fans out into
   `staticBri`, so it is applied once, not twice (no double-dimming).
-- **EP14 (Fara)**: off → static; white → static + fan-out its level to every `staticBri`;
-  color → effect (hue selects it, level = effect brightness). Fara never turns lamps off.
+- **EP14 (Fara)**: off **and** white → no effect (mode 0); color → effect (hue selects it).
+  Its level is **always** the effect brightness and never fans out to `staticBri`. Fara never
+  turns lamps off. A second group dimmer used to live here (white fanned its level out to
+  every lamp); it duplicated EP10-13, flattened per-channel levels on every color change and
+  read as a half-finished effect, so it was removed. Group brightness and "set the turn signal
+  to 50%" both belong to EP10-13, which already handle group fan-out and per-lamp addressing.
+- **Timing**: one time constant shapes everything — Lamp Setup's soft start (`softMs`) is the
+  channel slew for both static dimming and effect edges, which is what gives Turn its ramp.
+  Effect brightness additionally eases on its own constant (`MASTER_SMOOTH_MS` in the .ino),
+  because the app delivers level in bursts of ~10 commands and then holds for about a second.
 - **EP10-13 (lamps/group)**: on/off → `lampOn`, level → `staticBri`. Lamp commands never change
   the mode (a level does not force the lamp on, so an Alice group dim leaves off lamps dark).
 - The local menu writes `mode` / `staticBri` directly, so it is authoritative (last-writer-wins).
@@ -75,9 +88,20 @@ report reproduced the replacement. The precise station/app conversion causing th
 unknown; no saturation scaling or preset-specific offsets are applied.
 
 Implementation: `onApsIndication()` in `src/net/zigbee.cpp`, chained to Arduino's existing
-APS handler so binding-list processing continues. Recheck this hook after upgrading the
-Arduino core. Incoming color attributes remain readable. Re-pairing and other controllers
-have not been validated with this workaround.
+APS handler so binding-list processing continues. Incoming color attributes remain readable.
+
+Known limits, all still open:
+
+- The hook chains `zb_apsde_data_indication_handler()`, an **internal symbol of Arduino-ESP32
+  3.3.10** — not public API. A rename breaks the build loudly; a change in *when* the core
+  calls the APS handler would break the workaround silently. Recheck after any core upgrade.
+- Installation can fail quietly: if the Zigbee lock is not acquired at start-up the firmware
+  logs one line and runs **without** the workaround.
+- Reporting is stopped on an incoming Color Control command, so a `Configure Reporting` from
+  the coordinator (re-pairing, re-initialisation) re-arms it until the next such command.
+- Re-pairing and other controllers are unvalidated. A cross-check on zigbee2mqtt or ZHA would
+  say whether this is Yandex-specific interpretation or genuine attribute incoherence
+  (`ColorMode` 0x0008 vs `EnhancedColorMode` 0x4001 vs the unmaintained `CurrentX/Y`).
 
 ## Pin map (ground truth, from the PCB netlist)
 
