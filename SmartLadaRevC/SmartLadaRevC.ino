@@ -126,35 +126,19 @@ void loop() {
   menu::update(now);
   zb::update(now);
   if (zb::consumeDirty()) menu::notifyExternalChange();   // Alice/Zigbee changed state
-
-  // Effect brightness (EP14 "Fara" level) arrives from the app in coarse steps, and effect
-  // mode deliberately keeps the channel smoothing short (FX_SMOOTH_MS below) so chase/drive
-  // stay crisp -- which leaves every one of those steps visible as a jump. Static does not
-  // show it: there the same stepped stream is eased by the user's soft-start tau. So ease the
-  // MASTER with that tau instead: the brightness envelope is smooth while the effect keeps
-  // its own dynamics. Same exponential form as channels::write().
-  static float    masterSm = 0;
-  static uint32_t masterMs = 0;
-  {
-    uint32_t dt = now - masterMs; masterMs = now;
-    float tgt = (float)config::s.master;
-    float a = (config::s.softMs == 0) ? 1.0f
-                                      : (1.0f - expf(-(float)dt / (float)config::s.softMs));
-    masterSm += (tgt - masterSm) * a;
-    if (fabsf(tgt - masterSm) < 0.5f) masterSm = tgt;   // snap, no asymptotic crawl
-  }
+  config::tick(now);                 // restore-on-power-on: persist remote changes too
 
   uint8_t out[4];                    // lamp output runs every loop, independent of UI
-  fx::compute(config::s.mode, now, (uint8_t)(masterSm + 0.5f),
+  fx::compute(config::s.mode, now, config::s.master,
               config::s.lampOn, config::s.staticBri, out);
-  static constexpr uint16_t FX_SMOOTH_MS = 20;
   if (!power::present12V() && !power::forced()) {  // PD gating: no 12 V -> hold outputs off
     channels::inhibit(now);          // protective off is IMMEDIATE, not smoothed by the user's tau
   } else {                           // (debug "Force outputs" bypasses the gate)
-    // Smoothing: heavy tau (config::softMs) is for Alice's stepped static dimming; effects
-    // define their own dynamics and stay crisp (else a large tau smears chase/drive). After an
-    // inhibit s_actual is 0, so supply return eases up from zero via tau.
-    channels::setSoftMs(config::s.mode == 0 ? config::s.softMs : FX_SMOOTH_MS);
+    // One time constant for everything: Lamp Setup's soft start shapes effect edges too, so
+    // Turn ramps its lamps instead of snapping 0-100-0, and a stepped brightness stream from
+    // the app rounds off the same way it does in static. tau is set in setup() and by the menu
+    // when it is edited, so do NOT override it per mode here. After an inhibit s_actual is 0,
+    // so supply return eases up from zero via tau.
     channels::write(now, out);
   }
 

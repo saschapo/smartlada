@@ -61,8 +61,7 @@ static volatile TaskHandle_t s_reportTask = nullptr;
 // the library fires the HSV callback on each, filling the other field by re-reading the
 // attribute table (ZigbeeColorDimmableLight.cpp). The first callback of the pair therefore
 // carries a HALF-UPDATED color: a new hue against the old saturation, or a new saturation
-// against the old hue. Acting on it selects the wrong effect for a few ms, and a stale sat=0
-// (left over from white) is read as "static" and flattens every staticBri to the level.
+// against the old hue. Acting on it selects the wrong effect for a few ms.
 // So latch the callback and apply it once the pair has settled.
 //
 // The deadline is taken from the FIRST pending sample and is NOT pushed back by later ones:
@@ -121,16 +120,20 @@ static LampEP  lamp0(10, 0), lamp1(11, 1), lamp2(12, 2), lamp3(13, 3);
 static LampEP* lamps[NUM_CH] = {&lamp0, &lamp1, &lamp2, &lamp3};
 static ZigbeeColorDimmableLight fara(FARA_EP);
 
-// Fara (EP14) is the EFFECT layer:
-//   off        -> static (mode 0); lamps stay under the group/individual control (not forced off)
-//   on + white -> static (mode 0); its dimmer is the static master -> fan out to every lamp
-//   on + color -> effect: hue picks the effect, level = effect brightness (master)
+// Fara (EP14) is the EFFECT layer, and ONLY that:
+//   off / white -> no effect (mode 0). Lamps keep whatever the group or the individual lamp
+//                  endpoints set; EP14 does not fan its level out to them. A second group
+//                  dimmer here duplicated EP10-13, flattened per-lamp levels on every color
+//                  change, and read as a half-finished effect in the app.
+//   color       -> effect: hue picks the effect, level = effect brightness (master)
+// Group brightness and "set the turn signal to 50%" both stay with EP10-13, which already
+// handle group fan-out and per-lamp addressing.
 // Level only: goes straight through, no latch. The app streams level updates while a slider is
 // dragged, and holding them for the settle window collapses a smooth drag into one step per
-// window. Target follows the CURRENT layer; a mode change re-routes it when the pair settles.
+// window. EP14's level is ALWAYS the effect brightness -- it never touches per-lamp levels, so
+// it can never resurrect a stale effect the way a level command used to.
 static void applyLevel(uint8_t value) {
-  if (config::s.mode == 0) { for (uint8_t i = 0; i < NUM_CH; i++) config::s.staticBri[i] = value; }
-  else                       config::s.master = value;
+  config::s.master = value;
   s_dirty = true;
 }
 
@@ -149,14 +152,11 @@ static void onFaraHsv(bool state, uint8_t hue, uint8_t sat, uint8_t value) {
 
 // Apply the settled Fara color. Runs on the loop task from update().
 static void applyFara(bool state, uint8_t hue, uint8_t sat, uint8_t value) {
-  if (!state) {
-    config::s.mode = 0;
-  } else if (sat < SAT_THRESH) {
-    config::s.mode = 0;
-    for (uint8_t i = 0; i < NUM_CH; i++) config::s.staticBri[i] = value;   // white dimmer = group-style master
+  if (!state || sat < SAT_THRESH) {
+    config::s.mode = 0;              // off and white both mean the same: no effect running
   } else {
     config::s.mode = hueToMode(hue);
-    config::s.master = value;                                              // effect brightness
+    config::s.master = value;        // effect brightness
   }
   s_dirty = true;
   Serial.printf("[%lu] ZB Fara on=%d hue=%u sat=%u val=%u -> mode=%u master=%u sB0=%u\n",
@@ -200,12 +200,6 @@ static bool snapEq(const StateSnap& a, const StateSnap& b) {
   return true;
 }
 
-static uint8_t avgStaticBri() {                    // overall lamp level (enabled channels)
-  int sum = 0, n = 0;
-  for (uint8_t i = 0; i < NUM_CH; i++)
-    if (config::s.lampOn & (1 << i)) { sum += config::s.staticBri[i]; n++; }
-  return n ? (uint8_t)(sum / n) : 0;
-}
 static void doReport(uint32_t nowMs) {
   // EP10-13: on/off + level (no callback registered -> cannot loop).
   for (uint8_t i = 0; i < NUM_CH; i++)
@@ -217,12 +211,8 @@ static void doReport(uint32_t nowMs) {
   // setLight*() still invokes onFaraHsv, so guard with s_reporting to ignore our own echo.
   s_reportTask = xTaskGetCurrentTaskHandle();
   s_reporting = true;
-  if (config::s.mode != 0 && config::s.mode <= fx::COUNT) {
-    fara.setLightState(true);
-    fara.setLightLevel(config::s.master);           // effect brightness
-  } else {
-    fara.setLightLevel(avgStaticBri());
-  }
+  if (config::s.mode != 0 && config::s.mode <= fx::COUNT) fara.setLightState(true);
+  fara.setLightLevel(config::s.master);             // EP14 level == effect brightness, always
   s_reporting = false;
 }
 

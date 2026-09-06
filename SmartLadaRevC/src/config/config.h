@@ -27,5 +27,6 @@ extern Settings s;
 
 void load();              // load from NVS, or defaults if absent/mismatched
 void save();              // persist current s
+void tick(uint32_t now);  // debounced autosave: persist whoever changed s (menu, Alice, group)
 
 }  // namespace config
