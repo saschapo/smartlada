@@ -121,6 +121,7 @@ static bool adjPctBtn(uint8_t& v, int m) {
 static void fmtParam(const fx::Param& p, char* buf, size_t n) {
   if (p.type == fx::PT_TIME_MS)      snprintf(buf, n, "%ld.%lds", p.value / 1000, (p.value % 1000) / 100);
   else if (p.type == fx::PT_PERCENT) snprintf(buf, n, "%ld%%", (long)p.value);
+  else if (p.type == fx::PT_ONOFF)   snprintf(buf, n, "%s", p.value ? "On" : "Off");
   else                               snprintf(buf, n, "%ld", (long)p.value);
 }
 
@@ -262,7 +263,11 @@ static void renderIdle() {
 
 // one list row: bold when selected, inverted when editing (replaces the frame)
 static void row(int16_t y, bool sel, const char* label, const char* value,
-                bool hasBar, uint8_t barVal, int16_t barX = 62, int16_t barW = 47) {
+                bool hasBar, uint8_t barVal, int16_t barX = 62, int16_t barW = 47,
+                int16_t valR = 126,     // valR: right edge of the value, pulled in where
+                                        // a scroll arrow shares the margin (Timings)
+                int16_t valL = -1) {    // valL >= 0: left-align the value there instead, so a
+                                        // barless row starts where the bars start
   oled.setFont(sel ? &orp_bold : &orp_medium);
   oled.setTextSize(1);
   oled.setTextColor(SSD1306_WHITE);
@@ -271,7 +276,8 @@ static void row(int16_t y, bool sel, const char* label, const char* value,
   if (hasBar) bar(barX, y, barW, 9, barVal);   // barX/barW per screen (Brightness vs Timings)
   oled.setFont(&dweep);
   oled.setTextColor(SSD1306_WHITE);
-  printRight(value, 126, y + 7);
+  if (valL >= 0) { oled.setCursor(valL, y + 7); oled.print(value); }
+  else           printRight(value, valR, y + 7);
   if (sel && editing) display::invertRect(0, y - 1, 128, 11);
 }
 
@@ -305,22 +311,51 @@ static void renderTimings() {
     return;
   }
   const fx::Effect& e = fx::EFFECTS[config::s.mode - 1];
-  for (uint8_t i = 0; i < e.nparams; i++) {
-    const fx::Param& p = e.params[i];
-    uint8_t fill = (p.max > p.min)
-        ? (uint8_t)((int32_t)(p.value - p.min) * 255 / (p.max - p.min)) : 0;
-    char v[16]; fmtParam(p, v, sizeof(v));
-    row(14 + i * 12, i == cursor, p.name, v, true, fill, 48);   // same long bar, shifted left 14px
+  // Rows are 12 px from y=14, so four fit above the 64 px edge. Chase has more items than
+  // that (5 params + Reset), so scroll a window that keeps the cursor inside it.
+  static constexpr uint8_t ROWS = 4;
+  const uint8_t nItems = e.nparams + 1;
+  // Sticky window: it only moves when the cursor would leave it, so walking back up the list
+  // does not drag the view along -- the screen holds still until the cursor reaches its top
+  // row. Persists between frames, then is clamped in case the effect (and nItems) changed.
+  // MARGIN keeps one row visible past the cursor, so the list starts moving BEFORE the cursor
+  // reaches an edge -- that motion is what tells the user there is more, without waiting for
+  // them to hit the end. At the very ends the clamp wins and the cursor does reach the edge.
+  static constexpr int MARGIN = 1;
+  static uint8_t first = 0;
+  int f = first;
+  if (cursor - MARGIN < f)             f = cursor - MARGIN;
+  if (cursor + MARGIN > f + ROWS - 1)  f = cursor + MARGIN - ROWS + 1;
+  if (nItems <= ROWS)                  f = 0;
+  else if (f > nItems - ROWS)          f = nItems - ROWS;
+  if (f < 0)                           f = 0;
+  first = (uint8_t)f;
+
+  for (uint8_t i = first; i < nItems && i < first + ROWS; i++) {
+    int16_t y = 14 + (int16_t)(i - first) * 12;
+    if (i < e.nparams) {
+      const fx::Param& p = e.params[i];
+      const bool isSwitch = (p.type == fx::PT_ONOFF);   // no bar: "On"/"Off" says it all
+      uint8_t fill = (!isSwitch && p.max > p.min)
+          ? (uint8_t)((int32_t)(p.value - p.min) * 255 / (p.max - p.min)) : 0;
+      char v[16]; fmtParam(p, v, sizeof(v));
+      row(y, i == cursor, p.name, v, !isSwitch, fill, 51, 44, 118,
+          isSwitch ? 51 : -1);                                    // bar clear of long labels
+                                                                 // ("Fade Out"), value clear
+                                                                 // of the scroll arrows
+    } else {                                            // action row: Reset To Defaults
+      bool sel = (i == cursor);
+      oled.setFont(sel ? &orp_bold : &orp_medium);
+      oled.setTextSize(1);
+      oled.setTextColor(SSD1306_WHITE);
+      oled.setCursor(4, y + 8);
+      oled.print("Reset To Defaults");
+      if (sel) display::invertRect(0, y - 1, 128, 11);
+    }
   }
-  // action row: Reset To Defaults (inverted when selected)
-  int16_t y = 14 + e.nparams * 12;
-  bool sel = (cursor == e.nparams);
-  oled.setFont(sel ? &orp_bold : &orp_medium);
-  oled.setTextSize(1);
-  oled.setTextColor(SSD1306_WHITE);
-  oled.setCursor(4, y + 8);
-  oled.print("Reset To Defaults");
-  if (sel) display::invertRect(0, y - 1, 128, 11);
+  // more-above / more-below markers, right edge, clear of the value bars
+  if (first > 0)                oled.drawBitmap(120, 15, ARROW_UP, 8, 4, SSD1306_WHITE);
+  if (first + ROWS < nItems)    oled.drawBitmap(120, 58, ARROW_DOWN, 8, 4, SSD1306_WHITE);
 }
 
 static void renderLamp() {
@@ -670,6 +705,11 @@ void update(uint32_t now) {
         if (down) { cursor = (cursor + 1) % nItems; dirty = true; }
         if (ok) {
           if (cursor == e.nparams) { fx::resetParams(tmode); fx::saveParams(); dirty = true; }
+          else if (e.params && e.params[cursor].type == fx::PT_ONOFF) {
+            fx::Param& p = e.params[cursor];       // a switch has nothing to dial: OK flips it
+            p.value = p.value ? 0 : 1;             // in place, with no edit mode to confirm
+            pendingFxSave = true; dirty = true;
+          }
           else                     { editing = true; dirty = true; }
         }
         if (back) go(SC_MENU);

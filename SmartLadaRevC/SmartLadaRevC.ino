@@ -128,8 +128,24 @@ void loop() {
   if (zb::consumeDirty()) menu::notifyExternalChange();   // Alice/Zigbee changed state
   config::tick(now);                 // restore-on-power-on: persist remote changes too
 
+  // EP14 brightness arrives from the app in coarse jumps (~10% apart), far coarser than the
+  // group dimmer's steady ~100 ms stream, so the channel tau -- Lamp Setup soft start, kept
+  // short on purpose (50-100 ms) so effect edges stay crisp -- settles between them and every
+  // jump shows. Ease the MASTER on its own, longer constant: this smooths only the effect's
+  // brightness envelope, while its edge timing still comes from the channel tau.
+  static constexpr uint16_t MASTER_SMOOTH_MS = 500;
+  static float    masterSm = 0;
+  static uint32_t masterMs = 0;
+  {
+    uint32_t dt = now - masterMs; masterMs = now;
+    float tgt = (float)config::s.master;
+    float a = 1.0f - expf(-(float)dt / (float)MASTER_SMOOTH_MS);
+    masterSm += (tgt - masterSm) * a;
+    if (fabsf(tgt - masterSm) < 0.5f) masterSm = tgt;   // snap, no asymptotic crawl
+  }
+
   uint8_t out[4];                    // lamp output runs every loop, independent of UI
-  fx::compute(config::s.mode, now, config::s.master,
+  fx::compute(config::s.mode, now, (uint8_t)(masterSm + 0.5f),
               config::s.lampOn, config::s.staticBri, out);
   if (!power::present12V() && !power::forced()) {  // PD gating: no 12 V -> hold outputs off
     channels::inhibit(now);          // protective off is IMMEDIATE, not smoothed by the user's tau

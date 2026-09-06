@@ -1,15 +1,17 @@
 #pragma once
 #include <Arduino.h>
 
-// Animation effects. Each effect renders as a PURE function of a normalised cycle
-// phase (0..1): render(phase, ...). The single stateful bit is a phase integrator
-// in compute() that advances phase by dt/cycle each tick -- so changing a timing
+// Animation effects. Most render as a PURE function of a normalised cycle phase
+// (0..1): render(phase, ...). The single stateful bit is a phase integrator in
+// compute() that advances phase by dt/cycle each tick -- so changing a timing
 // changes only the RATE, and the lamp never jumps or flickers on edits.
+// DRIVE and CHASE are stateful instead: they render off the wall clock (s_fxNow),
+// because their envelopes outlive one cycle and cannot be recovered from a phase.
 //
 // Adding an effect = write render() + cycle() + a Param[] + one line in EFFECTS[].
 namespace fx {
 
-enum ParamType { PT_TIME_MS, PT_PERCENT, PT_COUNT };
+enum ParamType { PT_TIME_MS, PT_PERCENT, PT_COUNT, PT_ONOFF };
 
 struct Param {
   const char* name;

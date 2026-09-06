@@ -40,26 +40,69 @@ static void turnRender(float ph, const Effect*, uint8_t bright, uint8_t out[4]) 
   out[CH_TURN] = (ph < 0.5f) ? bright : 0;
 }
 
-// ---- Chase: one channel at a time sweeps CH1->CH4, with optional edge fade ----
+// ---- Chase: a lamp is triggered every Step; each one rises and falls on its own ----
+// Modelled as trigger + envelope, NOT as a slice of the cycle: the previous shape made Fade a
+// fraction of Step, so it could never outlast one slot (Step 0.2 s with Fade 2 s simply
+// clamped, and the lamp went dark in 0.2 s).
+//
+// Every Step a lamp is triggered and runs its own Fade In -> On -> Fade Out envelope, which is
+// free to outlive several later triggers -- that overlap is what makes it read as a snake
+// rather than a row of separate blinks. Step and On are deliberately separate knobs: with
+// Step < FadeIn+On+FadeOut the tails overlap, with Step larger the lamps run with gaps between
+// them. Random picks the next lamp instead of walking in order, turning the same envelope into
+// scattered flicker. Stateful -> renders off the wall clock, not the phase.
 static Param chaseP[] = {
-  {"Step", PT_TIME_MS, 100, 10000, 50, 400, 400},
-  {"Fade", PT_TIME_MS,   0,  4000, 50, 150, 150},
+  {"Step",     PT_TIME_MS, 100, 10000, 50, 300, 300},   // time from one lamp starting to the next
+  {"On",       PT_TIME_MS,   0,  5000, 50,   0,   0},   // hold at full between the two fades
+  {"Fade In",  PT_TIME_MS,   0,  5000, 50, 200, 200},
+  {"Fade Out", PT_TIME_MS,   0,  5000, 50, 600, 600},
+  {"Random",   PT_ONOFF,     0,     1,  1,   0,   0},
 };
 static uint32_t chaseCycle(const Effect* s) { return (uint32_t)s->params[0].value * 4; }
-static void chaseRender(float ph, const Effect* s, uint8_t bright, uint8_t out[4]) {
-  float sp = ph * 4.0f;
-  int slot = (int)sp; if (slot > 3) slot = 3;
-  float local = sp - slot;                                  // 0..1 within the slot
-  // fade as a fraction of the slot, clamped so the up/down ramps never overlap
-  float fadeFrac = (float)s->params[1].value / s->params[0].value;
-  if (fadeFrac > 0.5f) fadeFrac = 0.5f;
-  float v = 1.0f;
-  if (fadeFrac > 0) {
-    if (local < fadeFrac)            v = local / fadeFrac;
-    else if (local > 1 - fadeFrac)   v = (1 - local) / fadeFrac;
+
+static uint32_t s_chaseNextAt = 0;                   // when the next lamp is triggered
+static uint32_t s_chaseTrig[4] = {0, 0, 0, 0};       // last trigger time per lamp
+static bool     s_chaseLive[4] = {false, false, false, false};
+static int8_t   s_chaseLast = -1;                    // last lamp triggered (Random avoids repeats)
+static bool     s_chaseInit = false;                 // reset by compute() on entering CHASE
+
+static void chaseRender(float, const Effect* s, uint8_t bright, uint8_t out[4]) {
+  const uint32_t now  = s_fxNow;
+  const uint32_t step = (uint32_t)s->params[0].value;
+  const uint32_t hold = (uint32_t)s->params[1].value;
+  const uint32_t fin  = (uint32_t)s->params[2].value;
+  const uint32_t fout = (uint32_t)s->params[3].value;
+  const bool     rnd  = s->params[4].value != 0;
+
+  if (!s_chaseInit) {
+    s_chaseInit = true; s_chaseNextAt = now; s_chaseLast = -1;
+    for (uint8_t i = 0; i < 4; i++) { s_chaseTrig[i] = now; s_chaseLive[i] = false; }
   }
-  for (uint8_t i = 0; i < 4; i++) out[i] = 0;
-  out[slot] = bscale(bright, v);
+  // Resync rather than catch up if the clock ran away (mode just entered, long stall):
+  // replaying every missed trigger would burst all four lamps at once.
+  if ((int32_t)(now - s_chaseNextAt) > (int32_t)(4 * step)) s_chaseNextAt = now;
+
+  while ((int32_t)(now - s_chaseNextAt) >= 0) {
+    int8_t nxt;
+    if (rnd) { do { nxt = (int8_t)(esp_random() & 3); } while (nxt == s_chaseLast); }
+    else       nxt = (int8_t)((s_chaseLast + 1) & 3);
+    s_chaseLast = nxt;
+    s_chaseTrig[nxt] = s_chaseNextAt;     // re-triggering a still-lit lamp restarts its envelope
+    s_chaseLive[nxt] = true;
+    s_chaseNextAt += step;
+  }
+
+  for (uint8_t i = 0; i < 4; i++) {
+    out[i] = 0;
+    if (!s_chaseLive[i]) continue;
+    uint32_t age = now - s_chaseTrig[i];
+    float v;
+    if (age < fin)                    v = fin ? (float)age / (float)fin : 1.0f;
+    else if (age < fin + hold)        v = 1.0f;                       // steady on
+    else if (age < fin + hold + fout) v = fout ? 1.0f - (float)(age - fin - hold) / (float)fout : 0.0f;
+    else { s_chaseLive[i] = false; continue; }
+    out[i] = bscale(bright, v);
+  }
 }
 
 // ---- Fade: smooth crossfade around the ring CH1->CH2->CH3->CH4-> ----
@@ -143,12 +186,17 @@ static void driveRender(float, const Effect*, uint8_t bright, uint8_t out[4]) {
 }
 static uint32_t driveCycle(const Effect*) { return 1000; }   // phase unused (FSM on real time)
 
+// Derive nparams from the array itself. Hand-written counts drift: Chase shipped with 5
+// params and a stale "2" here, which hid three of them from the menu and silently loaded the
+// old saved value into the wrong slot.
+#define NPARAMS(a) (uint8_t)(sizeof(a) / sizeof((a)[0]))
+
 Effect EFFECTS[] = {
-  {"Breathe", breatheP, 1, breatheCycle, breatheRender},
-  {"Turn",    turnP,    1, turnCycle,    turnRender},
-  {"Chase",   chaseP,   2, chaseCycle,   chaseRender},
-  {"Fade",    fadeP,    1, fadeCycle,    fadeRender},
-  {"Drive",   nullptr,  0, driveCycle,   driveRender},
+  {"Breathe", breatheP, NPARAMS(breatheP), breatheCycle, breatheRender},
+  {"Turn",    turnP,    NPARAMS(turnP),    turnCycle,    turnRender},
+  {"Chase",   chaseP,   NPARAMS(chaseP),   chaseCycle,   chaseRender},
+  {"Fade",    fadeP,    NPARAMS(fadeP),    fadeCycle,    fadeRender},
+  {"Drive",   nullptr,  0,                 driveCycle,   driveRender},
 };
 const uint8_t COUNT = sizeof(EFFECTS) / sizeof(EFFECTS[0]);
 
@@ -162,7 +210,7 @@ void compute(uint8_t mode, uint32_t now, uint8_t master,
   uint32_t dt = now - s_lastMs;
   s_lastMs = now;                                    // advance clock even when off (no jump on resume)
   s_fxNow  = now;                                    // for the stateful DRIVE effect
-  if (mode != s_lastMode) { s_phase = 0.0f; s_lastMode = mode; s_driveInit = false; }
+  if (mode != s_lastMode) { s_phase = 0.0f; s_lastMode = mode; s_driveInit = false; s_chaseInit = false; }
 
   // Effect layer: Fara (EP14) color selected an animation mode -> frame * master (effect
   // brightness) across all 4 channels. Fara off/white -> mode 0 -> static below.
