@@ -57,8 +57,8 @@ loop():  buttons::poll -> menu::update -> zb::update -> [zb::consumeDirty -> men
 |---|---|
 | `src/channels` | LEDC PWM (10-bit), soft-start slew, gamma/min-max LUT |
 | `src/fx`       | effects + the compositor (`compute`) |
-| `src/input`    | 4 buttons, debounce + accelerating repeat |
-| `src/display`  | SSD1315 over Adafruit_SSD1306 |
+| `src/input`    | 4 buttons, debounce + accelerating repeat (EC11 encoder with `UI_TFT`) |
+| `src/display`  | SSD1315 over Adafruit_SSD1306 (ST7789 TFT with `UI_TFT`) |
 | `src/ui`       | OLED menu state machine |
 | `src/config`   | NVS-backed `Settings` (`config::s`) |
 | `src/net`      | Zigbee endpoints + callbacks -> `config::s` |
@@ -175,6 +175,45 @@ uv run --with bleak python3 tools/ble_ota.py path/to/SmartLadaRevC.ino.bin
   button held from the confirm screen does not immediately cancel.
 - A link lost *after* `FINISH` does not cancel the update: the image is complete by then and
   only an explicit ABORT stops the commit. `--drop-after-finish` exercises exactly that.
+
+## Bench variant: 2.4" TFT + encoder (`UI_TFT`)
+
+A build flag swaps the OLED + 4 keys for the 2.4" ST7789 (240x320) + EC11 module from
+[`sketches/Ec11Tft24Test`](../sketches/Ec11Tft24Test/README.md). Default builds are unchanged.
+
+```sh
+arduino-cli compile -b "$FQBN" --build-property "compiler.cpp.extra_flags=-DUI_TFT=1" SmartLadaRevC
+```
+
+```
+header        module      GPIO        header        module   GPIO
+J4-8          GND         -           J4-3          A        IO21
+J4-7          VCC (3V3)   -           J4-2          B        IO22
+J4-6 (SCL)    SCL = SCLK  IO18        J4-1          PUSH     IO23
+J4-5 (SDA)    SDA = MOSI  IO19        J8-2 (RX)     CS       IO17
+J4-4          DC          IO20        J8-3 (TX)     RES      IO16
+BLK, K0: not connected
+```
+
+- The panel needs real CS and RES, and J4 has only six signals, so both come from the J8 debug
+  UART. **This build has no UART0 console**, including the Zigbee-stack logs that normally go there.
+- The menu code is untouched: it still draws into the 128x64 SSD1306 buffer, which `display()`
+  fits to the panel (portrait, 240x120, x1.875 nearest-neighbour: crisp, but some source pixels
+  come out 2 px wide and some 1 px) and streams only the rectangle that changed since the last
+  frame, at 40 MHz. The module has no TE line, so full-screen motion (the menu carousel) can
+  still tear.
+- Encoder: CW = UP, so values rise; `menu::update` swaps its list navigation under `UI_TFT` so
+  CW also steps lists forward. Short PUSH (on release) = SEL, hold 0.6 s = BACK. A detent within
+  250 ms of the previous one counts as "held", so step acceleration ramps and the deferred NVS
+  save waits until the knob stops.
+- BLK is not driven, so the display-brightness setting does nothing; only the dim-on-timeout
+  state greys the picture (~25%).
+- Bring-up tools: [`sketches/RevCTftEnc`](../sketches/RevCTftEnc/RevCTftEnc.ino) (panel +
+  encoder, soft-reset check) and [`sketches/RevCTftDiag`](../sketches/RevCTftDiag/RevCTftDiag.ino)
+  (colour cycle, IO_MUX / GPIO-matrix dump, pad drive A/B).
+- CS->GND + RES->3V3 (to stay on J4 alone) left the panel white, but that test ran on a board
+  with a badly soldered U1, so it proves nothing either way. It would be fragile regardless:
+  with CS tied low one spurious SCLK edge misaligns the stream until a power cycle.
 
 ## Status & roadmap
 

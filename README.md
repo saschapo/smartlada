@@ -41,6 +41,9 @@ arduino-cli compile -b "$FQBN" SmartLadaRevC
 arduino-cli upload  -b "$FQBN" -p /dev/cu.usbmodemXXXX SmartLadaRevC
 ```
 
+Bench variant with the 2.4" TFT + encoder module in place of the OLED + keys: build flag
+`UI_TFT`, see [`SmartLadaRevC/README.md`](SmartLadaRevC/README.md#bench-variant-24-tft--encoder-ui_tft).
+
 Plan and resume notes: [`SmartLadaRevC/DEV_PLAN.md`](SmartLadaRevC/DEV_PLAN.md),
 [`SmartLadaRevC/SESSION_HANDOFF.md`](SmartLadaRevC/SESSION_HANDOFF.md).
 

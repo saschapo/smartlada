@@ -1,5 +1,74 @@
 #include "buttons.h"
+#include "../display/display.h"   // UI_TFT
 
+#if UI_TFT
+#include <ESP32Encoder.h>
+
+// Bench variant: EC11 on J4 instead of the 4 keys (A=KEY3/IO21, B=KEY2/IO22, PUSH=KEY1/IO23,
+// module-side 10k pull-ups + RC). A detent CW = UP (raises values), CCW = DOWN; menu::update
+// swaps its list navigation so CW also steps lists forward. One event per poll, extra
+// detents queued (capped, so a fast spin does not overshoot after the knob stops). A turn
+// within SPIN_MS of the previous one reads as "held", so the menu's accelMult ramps and its
+// deferred NVS saves wait until the knob rests. PUSH: short (on release) = SEL, held = BACK.
+namespace buttons {
+
+static constexpr uint8_t  PIN_A = 21, PIN_B = 22, PIN_PUSH = 23;
+static constexpr uint32_t DEBOUNCE_MS = 25, SPIN_MS = 250, LONG_MS = 600;
+static constexpr int32_t  QUEUE_MAX = 4;
+
+static ESP32Encoder enc;
+static int32_t  lastDet, pend;
+static uint32_t spinStart, lastStep;
+static uint8_t  spinKey = UP;
+static bool     raw = HIGH, stable = HIGH, longFired;
+static uint32_t rawEdge, pressT;
+static bool     ev[N];
+
+void begin() {
+  pinMode(PIN_PUSH, INPUT);
+  ESP32Encoder::useInternalWeakPullResistors = puType::none;
+  enc.attachFullQuad(PIN_B, PIN_A);           // swap A/B to reverse the direction
+  enc.setFilter(1023);
+}
+
+void poll(uint32_t now) {
+  for (uint8_t i = 0; i < N; i++) ev[i] = false;
+
+  int64_t c = enc.getCount();
+  int32_t det = (int32_t)((c >= 0 ? c : c - 3) / 4);    // floor: 4 counts per detent
+  pend = constrain(pend + det - lastDet, -QUEUE_MAX, QUEUE_MAX);
+  lastDet = det;
+  if (pend) {
+    spinKey = pend > 0 ? UP : DOWN;
+    ev[spinKey] = true;
+    pend += pend > 0 ? -1 : 1;
+    if (now - lastStep > SPIN_MS) spinStart = now;
+    lastStep = now;
+  }
+
+  bool r = digitalRead(PIN_PUSH);
+  if (r != raw) { raw = r; rawEdge = now; }
+  else if (now - rawEdge >= DEBOUNCE_MS && r != stable) {
+    stable = r;
+    if (stable == LOW) { pressT = now; longFired = false; }
+    else if (!longFired) ev[SEL] = true;
+  }
+  if (stable == LOW && !longFired && now - pressT >= LONG_MS) { longFired = true; ev[BACK] = true; }
+}
+
+bool pressed(uint8_t i) { return ev[i]; }
+bool repeat(uint8_t i)  { return ev[i]; }
+uint32_t heldMs(uint8_t i) {
+  uint32_t now = millis();
+  if (i == spinKey && now - lastStep < SPIN_MS) return now - spinStart + 1;
+  if (i == SEL && stable == LOW && !longFired) return now - pressT + 1;
+  return 0;
+}
+bool down(uint8_t i) { return i == SEL && raw == LOW; }
+
+}  // namespace buttons
+
+#else
 namespace buttons {
 
 // Rev C routing (from PCB netlist, J4): KEY1=GPIO23, KEY2=GPIO22, KEY3=GPIO21, KEY4=GPIO20.
@@ -59,3 +128,4 @@ uint32_t heldMs(uint8_t i)  { return (b[i].stable == LOW) ? (millis() - b[i].pre
 bool     down(uint8_t i)    { return b[i].lastRaw == LOW; }
 
 }  // namespace buttons
+#endif  // UI_TFT

@@ -681,6 +681,11 @@ void update(uint32_t now) {
   static uint32_t s_infoTick = 0;                       // Info + idle + Zigbee show live values -> ~1 Hz
   if ((screen == SC_INFO || screen == SC_IDLE || screen == SC_ZB) && now - s_infoTick >= 1000) { s_infoTick = now; dirty = true; }
   bool up = pressed(UP), down = pressed(DOWN), ok = pressed(SEL), back = pressed(BACK);
+#if UI_TFT
+  // Encoder: CW = UP so values rise, but a list must step forward (DOWN) on CW. The locals
+  // below drive only navigation (cursors, carousels, Yes/No); values read repeat() directly.
+  { bool t = up; up = down; down = t; }
+#endif
   bool act = up || down || ok || back || heldMs(UP) || heldMs(DOWN) || heldMs(SEL) || heldMs(BACK);
   if (act) lastAct = now;
 
