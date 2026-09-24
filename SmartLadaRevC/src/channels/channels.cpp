@@ -13,27 +13,33 @@ static const uint8_t PINS[N] = {0, 1, 2, 3};   // ch: turn,marker,reverse,stop -
 static constexpr uint8_t  RES_BITS = 10;       // 1023 levels; supports up to ~39 kHz
 static constexpr uint16_t DUTY_MAX = (1 << RES_BITS) - 1;
 
-static uint16_t s_lut[256];                    // input 0..255 -> duty 0..DUTY_MAX
+// Output calibration: gamma plus the [min%, max%] duty window, kept as floats so nothing is
+// quantised to 8 bits before the 10-bit duty (a low master used to round dim lamps to 0).
+static float    s_gamma  = 1.9f;
+static float    s_lo     = 0.01f;              // min level, duty fraction
+static float    s_hi     = 1.0f;               // max level, duty fraction
 static uint16_t s_softMs = 250;                // smoothing time constant tau (ms)
-static float    s_actual[N] = {0, 0, 0, 0};    // slewing output (0..255 domain)
+static float    s_actual[N] = {0, 0, 0, 0};    // slewing output, duty fraction 0..1
 static uint32_t s_lastMs = 0;
 
-// Rebuild the gamma / min-max lookup. Input 0 stays off; 1..255 map into the
-// [min%, max%] duty window through the gamma curve.
+static inline float clamp01(float x) { return x < 0.0f ? 0.0f : (x > 1.0f ? 1.0f : x); }
+
 void setCalib(uint8_t gammaX10, uint8_t minPct, uint8_t maxPct) {
   float gamma = gammaX10 / 10.0f;
-  if (gamma < 1.0f) gamma = 1.0f;
-  float loDuty = (float)DUTY_MAX * minPct / 100.0f;
-  float hiDuty = (float)DUTY_MAX * maxPct / 100.0f;
-  if (hiDuty < loDuty) hiDuty = loDuty;
-  s_lut[0] = 0;
-  for (int i = 1; i < 256; i++) {
-    float g = powf((float)i / 255.0f, gamma);
-    int32_t d = (int32_t)(loDuty + g * (hiDuty - loDuty) + 0.5f);
-    if (d < 0) d = 0; if (d > DUTY_MAX) d = DUTY_MAX;
-    s_lut[i] = (uint16_t)d;
-  }
+  s_gamma = (gamma < 1.0f) ? 1.0f : gamma;
+  s_lo = minPct / 100.0f;
+  s_hi = maxPct / 100.0f;
+  if (s_hi < s_lo) s_hi = s_lo;
 }
+
+// Brightness 0 stays off; anything above 0 lands in [min%, max%] through the gamma curve,
+// so brightness 1% = min level, 100% = max level.
+float remap(float level) {
+  if (level <= 0.0f) return 0.0f;
+  return s_lo + powf(clamp01(level), s_gamma) * (s_hi - s_lo);
+}
+
+float shape(float v) { return powf(clamp01(v), s_gamma); }
 
 void setSoftMs(uint16_t ms) { s_softMs = ms; }
 
@@ -70,19 +76,22 @@ void inhibit(uint32_t now) {
   for (uint8_t i = 0; i < N; i++) { s_actual[i] = 0; ledcWrite(PINS[i], 0); }
 }
 
-void write(uint32_t now, const uint8_t target[N]) {
+void write(uint32_t now, const float duty[N]) {
   uint32_t dt = now - s_lastMs;
   s_lastMs = now;
   // Exponential smoothing toward the target: s_softMs is the time constant tau (ms). This
   // continuously eases toward the latest target, so Alice's stepped level stream (~15/100ms)
   // rounds into a smooth curve instead of a rate-limiter's jump-and-hold staircase. A big
   // change settles in ~3*tau. tau=0 => instant.
+  // Slewing runs on the DUTY (after the min-level remap), not on the brightness input: easing
+  // the input made a fade-out park at the min-level floor until the input crawled under one
+  // LSB (~6*tau), then snap off. On duty the lamp drops through the floor to 0 in ~tau.
   float alpha = (s_softMs == 0) ? 1.0f : (1.0f - expf(-(float)dt / (float)s_softMs));
   for (uint8_t i = 0; i < N; i++) {
-    float t = (float)target[i];
+    float t = clamp01(duty[i]);
     s_actual[i] += (t - s_actual[i]) * alpha;
-    if (fabsf(t - s_actual[i]) < 0.5f) s_actual[i] = t;   // snap so it settles, no asymptotic crawl
-    ledcWrite(PINS[i], s_lut[(uint8_t)(s_actual[i] + 0.5f)]);
+    if (fabsf(t - s_actual[i]) < 0.5f / DUTY_MAX) s_actual[i] = t;   // snap: settle, no asymptotic crawl
+    ledcWrite(PINS[i], (uint32_t)(s_actual[i] * DUTY_MAX + 0.5f));
   }
 }
 

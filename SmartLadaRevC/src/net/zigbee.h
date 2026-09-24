@@ -14,6 +14,7 @@ bool begin();               // configure endpoints + start the stack; join runs 
 void update(uint32_t now);  // poll link state; flags dirty on connect/disconnect transitions
 bool connected();           // true once joined a network
 bool consumeDirty();        // returns (and clears) whether network activity changed state
+bool consumeMasterFromRadio();  // returns (and clears) whether the last master write came from Zigbee
 void factoryReset();        // leave the network + erase Zigbee NVS, then reboot (== re-pair)
 bool colorFixActive();      // Yandex color-report workaround installed (see zigbee.cpp)
 

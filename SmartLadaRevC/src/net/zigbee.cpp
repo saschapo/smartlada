@@ -149,8 +149,14 @@ static ZigbeeColorDimmableLight fara(FARA_EP);
 // dragged, and holding them for the settle window collapses a smooth drag into one step per
 // window. EP14's level is ALWAYS the effect brightness -- it never touches per-lamp levels, so
 // it can never resurrect a stale effect the way a level command used to.
+// Set when the master came from the radio: the main loop eases only those (coarse app jumps);
+// local edits (buttons, web) apply at once so the UI stays as responsive as the soft start.
+static volatile bool s_masterFromRadio = false;
+bool consumeMasterFromRadio() { bool r = s_masterFromRadio; s_masterFromRadio = false; return r; }
+
 static void applyLevel(uint8_t value) {
   config::s.master = value;
+  s_masterFromRadio = true;
   s_dirty = true;
 }
 
@@ -174,6 +180,7 @@ static void applyFara(bool state, uint8_t hue, uint8_t sat, uint8_t value) {
   } else {
     config::s.mode = hueToMode(hue);
     config::s.master = value;        // effect brightness
+    s_masterFromRadio = true;
   }
   s_dirty = true;
   Serial.printf("[%lu] ZB Fara on=%d hue=%u sat=%u val=%u -> mode=%u master=%u sB0=%u\n",

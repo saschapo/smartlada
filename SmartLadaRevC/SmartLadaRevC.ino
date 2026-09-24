@@ -101,8 +101,8 @@ void setup() {
                                   // latency and the "ramp" is really a jump (defeats inrush spreading)
   do {
     uint32_t now = millis();
-    uint8_t out[4];
-    fx::compute(config::s.mode, now, config::s.master,
+    float out[4];
+    fx::compute(config::s.mode, now, config::s.master / 255.0f,
                 config::s.lampOn, config::s.staticBri, out);
     if (!power::present12V() && !power::forced())   // gate the boot ramp too: no 12 V -> stay dark
       channels::inhibit(now);                       // (else lamps flash on a 5 V-only USB before NO 12V)
@@ -149,19 +149,29 @@ void loop() {
   // short on purpose (50-100 ms) so effect edges stay crisp -- settles between them and every
   // jump shows. Ease the MASTER on its own, longer constant: this smooths only the effect's
   // brightness envelope, while its edge timing still comes from the channel tau.
+  // Only radio-sourced changes are eased. A button or web edit applies at once, and a target
+  // of 0 always does: any eased master > 0 remaps to at least min level, so easing toward 0
+  // held the lamps at min level for ~0.9 s regardless of the soft start.
   static constexpr uint16_t MASTER_SMOOTH_MS = 500;
   static float    masterSm = 0;
   static uint32_t masterMs = 0;
+  static int16_t  masterSeen = -1;   // -1: first loop snaps to the saved level (boot ramp got there)
   {
     uint32_t dt = now - masterMs; masterMs = now;
-    float tgt = (float)config::s.master;
+    uint8_t tgt = config::s.master;
+    bool fromRadio = zb::consumeMasterFromRadio();
+    if (tgt != masterSeen) {
+      if (!fromRadio || masterSeen < 0) masterSm = tgt;
+      masterSeen = tgt;
+    }
+    if (tgt == 0) masterSm = 0;
     float a = 1.0f - expf(-(float)dt / (float)MASTER_SMOOTH_MS);
-    masterSm += (tgt - masterSm) * a;
-    if (fabsf(tgt - masterSm) < 0.5f) masterSm = tgt;   // snap, no asymptotic crawl
+    masterSm += ((float)tgt - masterSm) * a;
+    if (fabsf((float)tgt - masterSm) < 0.5f) masterSm = tgt;   // snap, no asymptotic crawl
   }
 
-  uint8_t out[4];                    // lamp output runs every loop, independent of UI
-  fx::compute(config::s.mode, now, (uint8_t)(masterSm + 0.5f),
+  float out[4];                      // lamp duty 0..1; output runs every loop, independent of UI
+  fx::compute(config::s.mode, now, masterSm / 255.0f,
               config::s.lampOn, config::s.staticBri, out);
   if (!power::present12V() && !power::forced()) {  // PD gating: no 12 V -> hold outputs off
     channels::inhibit(now);          // protective off is IMMEDIATE, not smoothed by the user's tau

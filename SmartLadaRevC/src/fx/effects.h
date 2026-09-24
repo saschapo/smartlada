@@ -22,7 +22,7 @@ struct Param {
 };
 
 struct Effect;
-typedef void     (*RenderFn)(float phase, const Effect* self, uint8_t bright, uint8_t out[4]);
+typedef void     (*RenderFn)(float phase, const Effect* self, float out[4]);   // frame 0..1 per channel
 typedef uint32_t (*CycleFn)(const Effect* self);   // full cycle length in ms
 
 struct Effect {
@@ -36,15 +36,14 @@ struct Effect {
 extern Effect        EFFECTS[];
 extern const uint8_t COUNT;                        // animation effects (excludes Static)
 
-// Compute the 4 channel outputs (the compositor). The mode alone picks the layer:
-//   mode != 0 (effect) -> effect frame * master, across all 4 channels (master = effect
+// Compute the 4 channel duties 0..1 (the compositor); master is 0..1. The mode picks the layer:
+//   mode != 0 (effect) -> shape(frame) * remap(master), across all 4 channels (master = effect
 //                         brightness = Fara EP14 level). Fara color selects the effect.
-//   mode == 0 (static) -> per-channel staticBri, gated by lampOn (NO master scaling).
-//                         The static "master" is the group dimmer / Fara-white / local idle,
-//                         which fans out into staticBri -- so it is not applied twice here.
+//   mode == 0 (static) -> remap(staticBri * master) per channel, gated by lampOn; the master
+//                         is a ceiling over the static picture.
 // EP14 (Fara) on/off/color sets mode; EP10-13 (lamps/group) set staticBri + lampOn.
-void compute(uint8_t mode, uint32_t now, uint8_t master,
-             uint8_t lampOn, const uint8_t staticBri[4], uint8_t out[4]);
+void compute(uint8_t mode, uint32_t now, float master,
+             uint8_t lampOn, const uint8_t staticBri[4], float duty[4]);
 
 const char* modeName(uint8_t mode);                // 0 = "Static"
 uint8_t     modeCount();                           // 1 (Static) + COUNT

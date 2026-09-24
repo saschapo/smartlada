@@ -55,7 +55,7 @@ loop():  buttons::poll -> menu::update -> zb::update -> [zb::consumeDirty -> men
 
 | Layer | Role |
 |---|---|
-| `src/channels` | LEDC PWM (10-bit), soft-start slew, gamma/min-max LUT |
+| `src/channels` | LEDC PWM (10-bit), soft-start slew on duty, gamma + min/max remap |
 | `src/fx`       | effects + the compositor (`compute`) |
 | `src/input`    | 4 buttons, debounce + accelerating repeat (EC11 encoder with `UI_TFT`) |
 | `src/display`  | SSD1315 over Adafruit_SSD1306 (ST7789 TFT with `UI_TFT`) |
@@ -69,6 +69,10 @@ The `mode` alone picks the layer; EP14 (Fara) is the effect layer, EP10-13 (lamp
 static picture:
 
 - **Effect (mode ≠ 0)** → animation frame × `master` (effect brightness), across all 4 channels.
+  Min Level remaps the **master**, not each frame value: `duty = frame^γ × remap(master)`, so at
+  master 1% the effect peaks at Min Level and keeps its shape (Breathe still dips to dark).
+- **Brightness remap** (Lamp Setup Min/Max Level + gamma): 0% = off, 1% = Min Level,
+  100% = Max Level. In static every lit lamp at master > 0 stays at or above Min Level.
 - **Static (mode 0)** → per-channel `staticBri`, gated by `lampOn`, then scaled by `master`.
   The master is a **ceiling**, in the spirit of Lamp Setup's Max Level: at 100% nothing is held
   back, and lowering it pulls the whole picture down while the lamps keep their relative
@@ -83,8 +87,11 @@ static picture:
   to 50%" both belong to EP10-13, which already handle group fan-out and per-lamp addressing.
 - **Timing**: one time constant shapes everything — Lamp Setup's soft start (`softMs`) is the
   channel slew for both static dimming and effect edges, which is what gives Turn its ramp.
-  Effect brightness additionally eases on its own constant (`MASTER_SMOOTH_MS` in the .ino),
-  because the app delivers level in bursts of ~10 commands and then holds for about a second.
+  The slew runs on the output duty (after the remap), so a fade to 0 drops through Min Level
+  in ~tau instead of parking there. Effect brightness **from Zigbee** additionally eases on its
+  own constant (`MASTER_SMOOTH_MS` in the .ino), because the app delivers level in bursts of
+  ~10 commands and then holds for about a second. Local edits (buttons, web) and any target of
+  0 bypass that easing, so the OLED DOWN 1% -> 0% takes exactly the soft start.
 - **EP10-13 (lamps/group)**: on/off → `lampOn`, level → `staticBri`. Lamp commands never change
   the mode (a level does not force the lamp on, so an Alice group dim leaves off lamps dark).
 - The local menu writes `mode` / `staticBri` directly, so it is authoritative (last-writer-wins).

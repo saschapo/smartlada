@@ -1,4 +1,5 @@
 #include "effects.h"
+#include "../channels/channels.h"
 #include <Preferences.h>
 #include <esp_random.h>
 #include <math.h>
@@ -12,22 +13,17 @@ static constexpr uint8_t CH_TURN = 0, CH_MARK = 1, CH_REV = 2, CH_STOP = 3;
 // function) can advance on real time inside its render().
 static uint32_t s_fxNow = 0;
 
-static inline uint8_t bscale(uint8_t bright, float f) {   // f in 0..1
-  if (f <= 0) return 0;
-  int v = (int)(bright * f + 0.5f);
-  return v > 255 ? 255 : (uint8_t)v;
-}
-static inline uint8_t pctScale(uint8_t bright, uint8_t pct) { return bscale(bright, pct / 100.0f); }
+// Renderers emit a frame 0..1 per channel, relative to the effect brightness; compute() applies
+// the master, so the frame keeps its full shape at any brightness.
 
 // ---- Breathe: all channels swell up and down together ----
 static Param breatheP[] = {
   {"Period", PT_TIME_MS, 500, 20000, 100, 3000, 3000},
 };
 static uint32_t breatheCycle(const Effect* s) { return (uint32_t)s->params[0].value; }
-static void breatheRender(float ph, const Effect*, uint8_t bright, uint8_t out[4]) {
+static void breatheRender(float ph, const Effect*, float out[4]) {
   float v = (ph < 0.5f) ? ph * 2.0f : (1.0f - ph) * 2.0f;
-  uint8_t o = bscale(bright, v);
-  for (uint8_t i = 0; i < 4; i++) out[i] = o;
+  for (uint8_t i = 0; i < 4; i++) out[i] = v;
 }
 
 // ---- Turn: ONLY the turn-signal channel blinks (iconic 1.5 Hz = 333/333 ms) ----
@@ -35,9 +31,9 @@ static Param turnP[] = {
   {"Period", PT_TIME_MS, 200, 4000, 50, 666, 666},   // full on+off; 666 ms = 1.5 Hz, 50/50
 };
 static uint32_t turnCycle(const Effect* s) { return (uint32_t)s->params[0].value; }
-static void turnRender(float ph, const Effect*, uint8_t bright, uint8_t out[4]) {
+static void turnRender(float ph, const Effect*, float out[4]) {
   for (uint8_t i = 0; i < 4; i++) out[i] = 0;
-  out[CH_TURN] = (ph < 0.5f) ? bright : 0;
+  out[CH_TURN] = (ph < 0.5f) ? 1.0f : 0.0f;
 }
 
 // ---- Chase: a lamp is triggered every Step; each one rises and falls on its own ----
@@ -66,7 +62,7 @@ static bool     s_chaseLive[4] = {false, false, false, false};
 static int8_t   s_chaseLast = -1;                    // last lamp triggered (Random avoids repeats)
 static bool     s_chaseInit = false;                 // reset by compute() on entering CHASE
 
-static void chaseRender(float, const Effect* s, uint8_t bright, uint8_t out[4]) {
+static void chaseRender(float, const Effect* s, float out[4]) {
   const uint32_t now  = s_fxNow;
   const uint32_t step = (uint32_t)s->params[0].value;
   const uint32_t hold = (uint32_t)s->params[1].value;
@@ -101,7 +97,7 @@ static void chaseRender(float, const Effect* s, uint8_t bright, uint8_t out[4]) 
     else if (age < fin + hold)        v = 1.0f;                       // steady on
     else if (age < fin + hold + fout) v = fout ? 1.0f - (float)(age - fin - hold) / (float)fout : 0.0f;
     else { s_chaseLive[i] = false; continue; }
-    out[i] = bscale(bright, v);
+    out[i] = v;
   }
 }
 
@@ -110,14 +106,14 @@ static Param fadeP[] = {
   {"Cross", PT_TIME_MS, 300, 20000, 100, 1500, 1500},
 };
 static uint32_t fadeCycle(const Effect* s) { return (uint32_t)s->params[0].value * 4; }
-static void fadeRender(float ph, const Effect*, uint8_t bright, uint8_t out[4]) {
+static void fadeRender(float ph, const Effect*, float out[4]) {
   float sp = ph * 4.0f;
   int seg = (int)sp; if (seg > 3) seg = 3;
   float local = sp - seg;
   uint8_t a = seg, b = (seg + 1) & 3;
   for (uint8_t i = 0; i < 4; i++) out[i] = 0;
-  out[a] = bscale(bright, 1.0f - local);
-  out[b] = bscale(bright, local);
+  out[a] = 1.0f - local;
+  out[b] = local;
 }
 
 // ---- Drive: logical random driving timeline as a finite-state machine (ported from
@@ -168,7 +164,7 @@ static uint8_t dPickNext(uint8_t st) {
   for (uint8_t i = 0; i < a.n; i++) { if (r < a.e[i].w) return a.e[i].to; r -= a.e[i].w; }
   return a.e[0].to;
 }
-static void driveRender(float, const Effect*, uint8_t bright, uint8_t out[4]) {
+static void driveRender(float, const Effect*, float out[4]) {
   uint32_t now = s_fxNow;
   if (!s_driveInit) { s_dstate = D_STOP; s_dPhaseStart = now; s_dPhaseDur = dPickDur(D_STOP); s_driveInit = true; }
   if (now - s_dPhaseStart >= s_dPhaseDur) {
@@ -179,10 +175,10 @@ static void driveRender(float, const Effect*, uint8_t bright, uint8_t out[4]) {
   uint8_t stop = d.stop;
   uint8_t turn = (d.turn == D_BLINK) ? (blinkOn ? 100 : 0) : d.turn;
   uint8_t mark = (stop > 0) ? 100 : d.markBase;      // marker/stop combined
-  out[CH_STOP] = pctScale(bright, stop);
-  out[CH_TURN] = pctScale(bright, turn);
-  out[CH_REV]  = pctScale(bright, d.rev);
-  out[CH_MARK] = pctScale(bright, mark);
+  out[CH_STOP] = stop   / 100.0f;
+  out[CH_TURN] = turn   / 100.0f;
+  out[CH_REV]  = d.rev  / 100.0f;
+  out[CH_MARK] = mark   / 100.0f;
 }
 static uint32_t driveCycle(const Effect*) { return 1000; }   // phase unused (FSM on real time)
 
@@ -205,8 +201,8 @@ static float    s_phase = 0.0f;
 static uint32_t s_lastMs = 0;
 static uint8_t  s_lastMode = 255;
 
-void compute(uint8_t mode, uint32_t now, uint8_t master,
-             uint8_t lampOn, const uint8_t staticBri[4], uint8_t out[4]) {
+void compute(uint8_t mode, uint32_t now, float master,
+             uint8_t lampOn, const uint8_t staticBri[4], float duty[4]) {
   uint32_t dt = now - s_lastMs;
   s_lastMs = now;                                    // advance clock even when off (no jump on resume)
   s_fxNow  = now;                                    // for the stateful DRIVE effect
@@ -214,6 +210,10 @@ void compute(uint8_t mode, uint32_t now, uint8_t master,
 
   // Effect layer: Fara (EP14) color selected an animation mode -> frame * master (effect
   // brightness) across all 4 channels. Fara off/white -> mode 0 -> static below.
+  // The min level remaps the MASTER, not each frame value: the effect's peak sits at
+  // remap(master) (master 1% -> peak at min level) and the frame scales inside it through the
+  // gamma curve, so a Breathe at 1% still breathes -- into the dark -- instead of collapsing to
+  // a flat min-level lamp that blinks off wherever the 8-bit product rounded to 0.
   if (mode != 0 && mode <= COUNT) {
     const Effect* e = &EFFECTS[mode - 1];
     uint32_t cyc = e->cycle(e);
@@ -221,17 +221,19 @@ void compute(uint8_t mode, uint32_t now, uint8_t master,
       s_phase += (float)dt / (float)cyc;
       s_phase -= floorf(s_phase);                  // wrap to [0,1)
     }
-    e->render(s_phase, e, master, out);            // effect spans all 4 channels * master
+    float frame[4];
+    e->render(s_phase, e, frame);
+    float peak = channels::remap(master);
+    for (uint8_t i = 0; i < 4; i++) duty[i] = channels::shape(frame[i]) * peak;
     return;
   }
 
   // Static: each lamp at its own level, gated by lampOn, then scaled by the master. The master
   // is a CEILING, in the same spirit as Lamp Setup's Max Level: at 100% nothing changes, and
   // lowering it pulls the whole picture down while the lamps keep their relative balance.
-  // (It applies in effect mode too, where render() already scaled by it.)
+  // A lit lamp at any master > 0 stays at or above min level (remap of a level > 0).
   for (uint8_t i = 0; i < 4; i++)
-    out[i] = (lampOn & (1 << i))
-             ? (uint8_t)(((uint16_t)staticBri[i] * master + 127) / 255) : 0;
+    duty[i] = (lampOn & (1 << i)) ? channels::remap(staticBri[i] / 255.0f * master) : 0.0f;
 }
 
 const char* modeName(uint8_t mode) { return (mode == 0) ? "Static" : EFFECTS[mode - 1].name; }
