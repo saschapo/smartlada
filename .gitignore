@@ -46,3 +46,12 @@ renders/
 # Шрифты: коммитим только выбранные основными для UI (orp + dweep, добавлены через git add -f);
 # остальные исходники экспериментов не коммитим
 fonts/
+
+# Сайт: шрифты страницы коммитим (правило fonts/ выше ловит любую папку fonts)
+!site/public/fonts/
+
+# Исходники фото (130 МБ) — в репо только экспорт в site/public/img/
+custom_pcb/smartlada_revC/product photos v0/
+
+# Python
+__pycache__/

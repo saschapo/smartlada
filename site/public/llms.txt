@@ -1,0 +1,17 @@
+# SmartLada
+
+> A personal project by Alexander Ponomarev (https://saschapo.me): a VAZ-2106 tail light turned into a smart room lamp. Личный проект Александра Пономарева: задний фонарь ВАЗ-2106 как умный светильник.
+
+- Four 12 V / 5 W car bulbs (turn signal, marker, reverse, brake), each on its own PWM channel with gamma, min/max level and soft start.
+- Effects: Static, Breathe, Turn, Chase, Fade, Drive.
+- Custom two-layer board (Rev C, KiCad, 100x59 mm) with an ESP32-C6, powered over USB-C Power Delivery (30 W charger or more).
+- Zigbee: shows up in Yandex Alice as five devices (four bulbs + "Fara", which selects effects by colour). The on-device menu and Alice share one state, last command wins.
+- Wi-Fi mode without a smart home: own access point and a web page with the same settings as the menu. One radio, so Zigbee or Wi-Fi, switched in the menu.
+- On-device menu: OLED 128x64 and four buttons; a variant with a 2.4" TFT and a rotary encoder. Firmware updates over Wi-Fi or Bluetooth.
+
+## Links
+
+- Page: https://smartlada.saschapo.me/
+- Source (schematics, board, firmware): https://github.com/saschapo/smartlada
+- Author: https://saschapo.me/
+- Another project: https://cineink.saschapo.me/

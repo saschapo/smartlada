@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en" data-h="px">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>SmartLada — a VAZ-2106 tail light as a smart lamp</title>
+<meta name="description" content="A personal project: a VAZ-2106 tail light with four 12 V car bulbs, a custom ESP32-C6 board, USB-C power and Zigbee control from Yandex Alice.">
+<meta name="author" content="Alexander Ponomarev">
+<link rel="canonical" href="https://smartlada.saschapo.me/">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="SmartLada">
+<meta property="og:title" content="SmartLada — a VAZ-2106 tail light as a smart lamp">
+<meta property="og:description" content="A VAZ-2106 tail light with four 12 V car bulbs, a custom ESP32-C6 board, USB-C power and Zigbee control from Yandex Alice.">
+<meta property="og:url" content="https://smartlada.saschapo.me/">
+<meta property="og:image" content="https://smartlada.saschapo.me/img/og.jpg">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="SmartLada: a lit VAZ-2106 tail light on a windowsill at night">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="ru_RU">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://smartlada.saschapo.me/img/og.jpg">
+
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="alternate" type="text/markdown" title="llms.txt" href="/llms.txt">
+<link rel="preload" href="/fonts/orp-bold.woff2" as="font" type="font/woff2" crossorigin>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Person",
+      "@id": "https://saschapo.me/#person",
+      "name": "Alexander Ponomarev",
+      "alternateName": ["Александр Пономарев", "saschapo"],
+      "url": "https://saschapo.me/",
+      "sameAs": ["https://instagram.com/saschapo", "https://t.me/saschapo", "https://github.com/saschapo"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://smartlada.saschapo.me/#website",
+      "url": "https://smartlada.saschapo.me/",
+      "name": "SmartLada",
+      "inLanguage": ["en", "ru"],
+      "publisher": {"@id": "https://saschapo.me/#person"}
+    },
+    {
+      "@type": "CreativeWork",
+      "@id": "https://smartlada.saschapo.me/#project",
+      "name": "SmartLada",
+      "description": "A VAZ-2106 tail light turned into a smart lamp: four 12 V car bulbs, a custom ESP32-C6 board, USB-C Power Delivery, Zigbee control from Yandex Alice or Wi-Fi with a web page.",
+      "url": "https://smartlada.saschapo.me/",
+      "image": "https://smartlada.saschapo.me/img/og.jpg",
+      "creator": {"@id": "https://saschapo.me/#person"},
+      "sameAs": "https://github.com/saschapo/smartlada",
+      "inLanguage": ["en", "ru"]
+    }
+  ]
+}
+</script>
+
+<style>
+  /* orp — the terminal font the device menu is drawn in (public domain, 6x12 px grid).
+     Converted pixel-for-pixel by site/tools/bdf2woff2.py; sizes must stay multiples of 12px. */
+  @font-face{font-family:'orp';font-weight:700;font-display:swap;src:url('/fonts/orp-bold.woff2') format('woff2')}
+  @font-face{font-family:'orp';font-weight:400;font-display:swap;src:url('/fonts/orp-medium.woff2') format('woff2')}
+
+  :root{
+    --bg:#0a0a0b;
+    --panel:#000;
+    --bg-2:#141416;
+    --line:#2c2c30;
+    --line-soft:#1e1e20;
+    --fg:#f2f2f2;
+    --fg-dim:#cdced2;
+    --fg-faint:#94969b;
+    --max:1176px;                 /* 1128 content + 2x24 gutter: four framed x2 screens fit a row */
+    --px:'orp','Courier New',monospace;
+    --ui:-apple-system,BlinkMacSystemFont,system-ui,'Helvetica Neue',Helvetica,Arial,sans-serif;
+    --sa:4;                       /* integer scale of the two big menu animations */
+    --sg:2;                       /* integer scale of the screen grid */
+  }
+
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--fg);
+    font-family:var(--ui);font-size:18px;line-height:1.7;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit}
+  img{display:block;max-width:100%;height:auto}
+  .wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+  .nb{white-space:nowrap}
+
+  /* ── top bar ── */
+  header.bar{
+    position:sticky;top:0;z-index:20;
+    background:rgba(10,10,11,.86);backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line);
+  }
+  .bar-inner{
+    max-width:var(--max);margin:0 auto;padding:14px 24px;
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .brand{font-family:var(--px);font-weight:700;font-size:24px;line-height:1;color:#fff;text-decoration:none}
+  .lang{display:flex;border:1px solid var(--line);overflow:hidden}
+  .lang button{
+    font-family:var(--ui);font-size:.8rem;letter-spacing:2px;
+    background:var(--bg);color:var(--fg-faint);border:none;padding:7px 12px;cursor:pointer;
+  }
+  .lang button.on{background:var(--fg);color:var(--bg)}
+  .lang button:focus-visible{outline:2px solid #fff;outline-offset:-2px}
+
+  /* ── headings: pixel face (data-h="px", default) or system bold (data-h="sys", ?h=sys) ── */
+  h1,h2,h3{color:#fff;margin:0;text-wrap:balance}
+  h1{font-size:clamp(1.9rem,4.4vw,3rem);line-height:1.2;font-weight:bold;letter-spacing:.5px;margin-bottom:28px}
+  h2{font-size:clamp(1.6rem,3.4vw,2.4rem);line-height:1.15;font-weight:bold;letter-spacing:.5px;margin-bottom:18px}
+  h3{font-size:1.25rem;line-height:1.3;margin-bottom:12px}
+  html[data-h="px"] h1,html[data-h="px"] h2,html[data-h="px"] h3{font-family:var(--px);font-weight:700;letter-spacing:0}
+  html[data-h="px"] h1{font-size:48px;line-height:60px}
+  html[data-h="px"] h2{font-size:36px;line-height:48px}
+  html[data-h="px"] h3{font-size:24px;line-height:36px}
+  /* orp Bold has no bold Cyrillic (it repeats the regular glyphs), so RU headings use the regular
+     face throughout instead of mixing bold digits/Latin with regular letters */
+  html[lang="ru"][data-h="px"] h1,html[lang="ru"][data-h="px"] h2,html[lang="ru"][data-h="px"] h3{font-weight:400}
+
+  /* ── hero ── */
+  .hero{padding:64px 0 72px;border-bottom:1px solid var(--line)}
+  .lede{font-size:clamp(1.05rem,2vw,1.18rem);color:var(--fg-dim);max-width:56ch;margin:0 0 24px}
+  .tags{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 40px;padding:0;list-style:none}
+  .tags li{font-size:.85rem;letter-spacing:.5px;text-transform:uppercase;color:var(--fg);
+           border:1px solid var(--line);background:var(--bg-2);padding:5px 11px;line-height:1.4}
+  .frame{margin:0;border:1px solid var(--line);background:var(--panel);overflow:hidden}
+  .frame img{width:100%}
+
+  /* ── sections ── */
+  section{padding:80px 0;border-bottom:1px solid var(--line)}
+  .section-lede{color:var(--fg-dim);max-width:62ch;margin:0 0 40px;font-size:1.1rem}
+  .txt p{color:var(--fg-dim);margin:0 0 16px}
+  .txt p:last-child{margin-bottom:0}
+  .split{display:grid;grid-template-columns:3fr 4fr;gap:48px;align-items:center}
+  .split.reverse{grid-template-columns:4fr 3fr}
+  .split.reverse .txt{order:-1}
+  .cap{color:var(--fg-faint);font-size:.9rem;line-height:1.5;margin:12px 0 0}
+
+  .feat-list{list-style:none;padding:0;margin:22px 0 0}
+  .feat-list li{padding:10px 0;color:var(--fg-dim);font-size:1rem;border-top:1px solid var(--line-soft)}
+  .feat-list li:nth-child(-n+2){border-top:none}   /* first EN + first RU item */
+  .feat-list b{color:#fff;font-weight:600}
+
+  /* ── device screens: 1-bit 128x64, only ever at an integer scale ── */
+  .oled{margin:0;background:var(--panel);border:1px solid var(--line);padding:8px;width:max-content}
+  .oled img{image-rendering:pixelated;image-rendering:crisp-edges;width:calc(128px * var(--s));height:calc(64px * var(--s));max-width:none}
+  .anims{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;margin-bottom:48px}
+  .anims figure{margin:0}
+  .anims .oled{--s:var(--sa)}
+  .screens{display:grid;grid-template-columns:repeat(auto-fill,calc(128px * var(--sg) + 14px));
+           gap:28px 16px;justify-content:space-between;margin:0;padding:0;list-style:none}
+  .screens .oled{--s:var(--sg);padding:6px}
+  .screens .cap,.anims .cap{margin-top:10px}
+  .variant{margin-top:72px}
+
+  /* ── board ── */
+  .renders{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:48px}
+  .specs{margin:28px 0 0;border:1px solid var(--line-soft);background:var(--line-soft);display:grid;gap:1px}
+  .spec{background:var(--bg);padding:14px 18px;display:grid;grid-template-columns:9.5rem 1fr;gap:16px}
+  .spec dt{color:var(--fg-faint);font-size:.82rem;letter-spacing:1.5px;text-transform:uppercase;padding-top:3px}
+  .spec dd{margin:0;color:var(--fg);font-size:1rem;line-height:1.55}
+
+  /* ── links ── */
+  .src-links{list-style:none;padding:0;margin:0;display:grid;gap:14px}
+  .src-links li{color:var(--fg-dim)}
+  .src-links a,.links a{color:#fff;text-decoration:none;border-bottom:1px solid var(--fg);padding-bottom:1px}
+  .src-links a:hover,.links a:hover{color:var(--fg-faint);border-color:var(--fg-faint)}
+  a:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
+
+  /* ── footer / bio (as on cineink) ── */
+  footer{padding:64px 0;color:var(--fg-dim)}
+  .foot-brand{font-family:var(--px);font-weight:700;color:#fff;font-size:24px;line-height:1;margin-bottom:28px}
+  .foot-made{color:var(--fg-faint);text-transform:uppercase;letter-spacing:2px;font-size:.8rem;margin-bottom:18px}
+  .bio{display:flex;gap:30px;align-items:flex-start}
+  .bio>img{width:140px;height:175px;object-fit:cover;border:1px solid var(--line);flex:0 0 auto}
+  .bio-name{color:#fff;font-size:1.2rem;font-weight:bold;letter-spacing:.5px;margin-bottom:4px}
+  .bio-role{color:var(--fg-faint);font-size:.85rem;letter-spacing:2px;text-transform:uppercase;margin-bottom:16px}
+  .bio-txt p{margin:0 0 14px;color:var(--fg-dim);font-size:1rem;line-height:1.65;max-width:66ch}
+  .links{display:flex;gap:22px;flex-wrap:wrap;margin-top:6px;font-size:.95rem;letter-spacing:1px}
+
+  /* ── responsive ── */
+  @media (max-width:1127px){:root{--sa:3}}
+  .alice-shot{max-width:400px}
+  @media (max-width:880px){
+    :root{--sa:2}
+    .split,.split.reverse{grid-template-columns:1fr;gap:28px}
+    .split.reverse .txt{order:0}
+    .tall{max-width:440px}
+    .renders{grid-template-columns:1fr}
+    .bio{flex-direction:column}
+    section{padding:60px 0}
+    .hero{padding:44px 0 56px}
+    html[data-h="px"] h1{font-size:36px;line-height:48px}
+  }
+  @media (max-width:560px){
+    .wrap,.bar-inner{padding-left:16px;padding-right:16px}
+    .screens{justify-content:start}
+    .spec{grid-template-columns:1fr;gap:2px}
+    html[data-h="px"] h1{font-size:24px;line-height:36px}
+    html[data-h="px"] h2{font-size:24px;line-height:36px}
+  }
+
+  /* language visibility */
+  [data-lang]{display:none}
+  html[lang="en"] [data-lang="en"]{display:revert}
+  html[lang="ru"] [data-lang="ru"]{display:revert}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-inner">
+    <a class="brand" href="/">SmartLada</a>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" id="btn-en">EN</button>
+      <button type="button" id="btn-ru">RU</button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ══════════════ HERO ══════════════ -->
+<section class="hero" id="top">
+  <div class="wrap">
+    <h1>
+      <span data-lang="en">a VAZ-2106 tail light, now a smart lamp</span>
+      <span data-lang="ru">задний фонарь ВАЗ-2106 как умный светильник</span>
+    </h1>
+    <p class="lede" data-lang="en">A stock VAZ-2106 tail light with four 12&nbsp;V car bulbs. A custom board inside dims each bulb on its own. Powered from a USB-C charger, set up from its own menu, controlled from Yandex Alice over Zigbee.</p>
+    <p class="lede" data-lang="ru">Штатный задний фонарь ВАЗ-2106 с четырьмя автомобильными лампами 12&nbsp;В. Внутри своя плата: каждая лампа регулируется отдельно. Питание от USB-C зарядки, настройка через меню на устройстве, управление из Алисы по Zigbee.</p>
+    <ul class="tags">
+      <li>VAZ-2106</li><li>ESP32-C6</li><li>Zigbee</li><li>Wi-Fi</li><li>USB-C PD</li>
+    </ul>
+    <figure class="frame">
+      <img src="/img/hero-1600.webp"
+           srcset="/img/hero-1080.webp 1080w, /img/hero-1600.webp 1600w, /img/hero-2240.webp 2240w"
+           sizes="(max-width:1176px) 100vw, 1128px"
+           width="2240" height="1344" fetchpriority="high"
+           alt="The SmartLada tail light lit on a windowsill at night: amber, white and red sections">
+    </figure>
+  </div>
+</section>
+
+<!-- ══════════════ IDEA ══════════════ -->
+<section id="idea">
+  <div class="wrap">
+    <div class="split">
+      <figure class="frame tall">
+        <img src="/img/idea-896.webp" width="896" height="1344" loading="lazy" decoding="async"
+             alt="The tail light on a desk next to a film slate and a studio monitor">
+      </figure>
+      <div class="txt">
+        <h2>
+          <span data-lang="en">a car part as a room light</span>
+          <span data-lang="ru">автомобильная деталь как домашний свет</span>
+        </h2>
+        <p data-lang="en">The tail light has four sections: turn signal, marker, reverse, brake. Here each one is a separate channel. The light can be a single steady glow, one section on its own, or a slow animation.</p>
+        <p data-lang="ru">В фонаре четыре секции: поворот, габарит, задний ход, стоп. Здесь каждая — отдельный канал. Можно оставить ровный свет, одну секцию или медленную анимацию.</p>
+        <p data-lang="en">The board fits inside the housing. The bulbs are ordinary incandescent car bulbs, so the light is warm and fades in and out rather than switching.</p>
+        <p data-lang="ru">Плата помещается внутри корпуса. Лампы — обычные автомобильные лампы накаливания: свет теплый, включается и гаснет плавно, а не щелчком.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ LIGHT ══════════════ -->
+<section id="light">
+  <div class="wrap">
+    <div class="split reverse">
+      <figure class="frame tall">
+        <img src="/img/light-800.webp" srcset="/img/light-800.webp 800w, /img/light-1400.webp 1400w"
+             sizes="(max-width:880px) 100vw, 460px"
+             width="1946" height="2919" loading="lazy" decoding="async"
+             alt="Close-up of the lit red lens of the tail light">
+      </figure>
+      <div class="txt">
+        <h2>
+          <span data-lang="en">four bulbs, four channels</span>
+          <span data-lang="ru">четыре лампы, четыре канала</span>
+        </h2>
+        <p data-lang="en">Each bulb has its own PWM channel. Per bulb: brightness, minimum and maximum level, gamma correction and a soft start.</p>
+        <p data-lang="ru">У каждой лампы свой ШИМ-канал. Для каждой настраиваются яркость, минимальный и максимальный уровень, гамма-коррекция и плавный старт.</p>
+        <ul class="feat-list">
+          <li data-lang="en"><b>Static</b> — fixed brightness per bulb</li>
+          <li data-lang="ru"><b>Static</b> — постоянная яркость каждой лампы</li>
+          <li data-lang="en"><b>Breathe</b> — a slow pulse</li>
+          <li data-lang="ru"><b>Breathe</b> — медленная пульсация</li>
+          <li data-lang="en"><b>Turn</b> — the turn signal blinking</li>
+          <li data-lang="ru"><b>Turn</b> — мигает поворотник</li>
+          <li data-lang="en"><b>Chase</b> — bulbs light one after another, overlapping</li>
+          <li data-lang="ru"><b>Chase</b> — лампы зажигаются по очереди, с наложением</li>
+          <li data-lang="en"><b>Fade</b> — a smooth crossfade around all four</li>
+          <li data-lang="ru"><b>Fade</b> — плавный перелив по кругу</li>
+          <li data-lang="en"><b>Drive</b> — a random but plausible drive: cruising, braking, turns, reverse, hazard lights</li>
+          <li data-lang="ru"><b>Drive</b> — случайная, но правдоподобная поездка: движение, торможение, повороты, задний ход, аварийка</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ ALICE ══════════════ -->
+<section id="alice">
+  <div class="wrap">
+    <div class="split">
+      <figure class="tall alice-shot" style="margin:0">
+        <div class="frame"><img src="/img/alice.webp" width="720" height="990" loading="lazy" decoding="async"
+             alt="The Alice app: four bulbs named reverse, brake, turn signal and marker, grouped as Fara, brightness 52%"></div>
+        <figcaption class="cap">
+          <span data-lang="en">The Alice app: four bulbs and the “Fara” group.</span>
+          <span data-lang="ru">Приложение Алисы: четыре лампы и группа «Фара».</span>
+        </figcaption>
+      </figure>
+      <div class="txt">
+        <h2>
+          <span data-lang="en">five devices in Alice</span>
+          <span data-lang="ru">пять устройств в Алисе</span>
+        </h2>
+        <p data-lang="en">The light joins a Yandex Station over Zigbee and shows up in the app as five devices: the four bulbs and “Fara”. Bulbs switch and dim one by one or as a group. “Fara” runs the effects: the colour picked in the app selects the effect, the brightness slider sets its brightness.</p>
+        <p data-lang="ru">Фонарь подключается к Яндекс Станции по Zigbee и появляется в приложении как пять устройств: четыре лампы и «Фара». Лампы включаются и регулируются по одной или группой. «Фара» управляет эффектами: цвет в приложении выбирает эффект, яркость задает его яркость.</p>
+        <p data-lang="en">The on-device menu and Alice change the same state; the last command wins.</p>
+        <p data-lang="ru">Меню на устройстве и Алиса меняют одно и то же состояние; действует последняя команда.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ WI-FI ══════════════ -->
+<section id="wifi">
+  <div class="wrap txt">
+    <h2>
+      <span data-lang="en">without a smart home</span>
+      <span data-lang="ru">без умного дома</span>
+    </h2>
+    <p class="section-lede" data-lang="en" style="margin-bottom:16px">Without a smart home, the light switches to Wi-Fi. It starts its own access point and serves a web page with the same settings as the menu. The QR code to join is on the screen.</p>
+    <p class="section-lede" data-lang="ru" style="margin-bottom:16px">Без умного дома фонарь переключается на Wi-Fi: поднимает свою точку доступа и открывает веб-страницу с теми же настройками, что и в меню. QR-код для подключения — на экране.</p>
+    <p class="section-lede" data-lang="en" style="margin-bottom:0">The ESP32-C6 has one radio, so it runs either Zigbee or Wi-Fi. The switch is in the menu. Firmware updates go over Wi-Fi or Bluetooth, without a cable.</p>
+    <p class="section-lede" data-lang="ru" style="margin-bottom:0">Радио в ESP32-C6 одно, поэтому работает либо Zigbee, либо Wi-Fi; переключение — в меню. Прошивка обновляется по Wi-Fi или Bluetooth, без кабеля.</p>
+  </div>
+</section>
+
+<!-- ══════════════ MENU ══════════════ -->
+<section id="menu">
+  <div class="wrap">
+    <h2>
+      <span data-lang="en">the menu on the device</span>
+      <span data-lang="ru">меню на устройстве</span>
+    </h2>
+    <p class="section-lede" data-lang="en">An OLED display, 128×64, and four buttons. All screens below are captured from the firmware: the board streams its frame buffer over USB and a script walks the menu. These are not mock-ups.</p>
+    <p class="section-lede" data-lang="ru">OLED-дисплей 128×64 и четыре кнопки. Все экраны ниже сняты с прошивки: плата отдает кадровый буфер по USB, скрипт проходит по меню. Это не макеты.</p>
+
+    <div class="anims">
+      <figure>
+        <div class="oled"><img src="/img/screens/menu.webp" width="128" height="64" loading="lazy" alt="Main menu carousel: Mode, Brightness, Timings, Lamp Setup, Settings"></div>
+        <figcaption class="cap"><span data-lang="en">main menu</span><span data-lang="ru">главное меню</span></figcaption>
+      </figure>
+      <figure>
+        <div class="oled"><img src="/img/screens/mode.webp" width="128" height="64" loading="lazy" alt="Effect select: Static, Breathe, Turn, Chase, Fade, Drive"></div>
+        <figcaption class="cap"><span data-lang="en">effect select</span><span data-lang="ru">выбор эффекта</span></figcaption>
+      </figure>
+    </div>
+
+    <ul class="screens">
+      <li><div class="oled"><img src="/img/screens/splash.png" width="128" height="64" loading="lazy" alt="Splash screen: SmartLADA, firmware version"></div>
+        <p class="cap"><span data-lang="en">splash</span><span data-lang="ru">заставка</span></p></li>
+      <li><div class="oled"><img src="/img/screens/idle.png" width="128" height="64" loading="lazy" alt="Main screen: brightness 100%, mode Static"></div>
+        <p class="cap"><span data-lang="en">main screen</span><span data-lang="ru">главный экран</span></p></li>
+      <li><div class="oled"><img src="/img/screens/brightness.png" width="128" height="64" loading="lazy" alt="Brightness: four bulbs and master at 100"></div>
+        <p class="cap"><span data-lang="en">brightness: per bulb and master</span><span data-lang="ru">яркость: по лампам и общая</span></p></li>
+      <li><div class="oled"><img src="/img/screens/lamp_setup_00.png" width="128" height="64" loading="lazy" alt="Lamp Setup: gamma, soft start, min and max level, PWM frequency"></div>
+        <p class="cap"><span data-lang="en">lamp setup: gamma, soft start, levels, PWM</span><span data-lang="ru">настройка ламп: гамма, плавный старт, уровни, ШИМ</span></p></li>
+      <li><div class="oled"><img src="/img/screens/settings_00.png" width="128" height="64" loading="lazy" alt="Settings: Display, Zigbee, WiFi, Force Out, System"></div>
+        <p class="cap"><span data-lang="en">settings</span><span data-lang="ru">настройки</span></p></li>
+      <li><div class="oled"><img src="/img/screens/display_00.png" width="128" height="64" loading="lazy" alt="Display: brightness, dim after, off after"></div>
+        <p class="cap"><span data-lang="en">display: brightness and timeouts</span><span data-lang="ru">дисплей: яркость и таймауты</span></p></li>
+      <li><div class="oled"><img src="/img/screens/zigbee.png" width="128" height="64" loading="lazy" alt="Zigbee screen: on/off, re-pair"></div>
+        <p class="cap">Zigbee</p></li>
+      <li><div class="oled"><img src="/img/screens/wifi.png" width="128" height="64" loading="lazy" alt="WiFi screen: on, show QR, reset, access point address"></div>
+        <p class="cap">Wi-Fi</p></li>
+    </ul>
+
+    <div class="split reverse variant">
+      <figure class="frame tall">
+        <img src="/img/tft-800.webp" srcset="/img/tft-800.webp 800w, /img/tft-1400.webp 1400w"
+             sizes="(max-width:880px) 100vw, 460px"
+             width="4000" height="6000" loading="lazy" decoding="async"
+             alt="The tail light with a 2.4-inch TFT module and a rotary encoder showing the main screen">
+      </figure>
+      <div class="txt">
+        <h3>
+          <span data-lang="en">another display option</span>
+          <span data-lang="ru">другой вариант дисплея</span>
+        </h3>
+        <p data-lang="en">A version with a different display module: a 2.4" colour TFT and a rotary encoder instead of the OLED and buttons. Same firmware, same menu.</p>
+        <p data-lang="ru">Вариант исполнения с другим дисплейным модулем: цветной TFT 2,4" и энкодер вместо OLED и кнопок. Прошивка и меню те же.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ BOARD ══════════════ -->
+<section id="board">
+  <div class="wrap">
+    <div class="split">
+      <figure class="frame">
+        <img src="/img/board-1080.webp" srcset="/img/board-1080.webp 1080w, /img/board-1800.webp 1800w"
+             sizes="(max-width:880px) 100vw, 460px"
+             width="4473" height="2982" loading="lazy" decoding="async"
+             alt="Close-up of the SmartLada Rev C board with its indicator LEDs lit">
+      </figure>
+      <div class="txt">
+        <h2>
+          <span data-lang="en">the board</span>
+          <span data-lang="ru">плата</span>
+        </h2>
+        <p data-lang="en">A custom two-layer board, designed in KiCad. Rev C is the third revision; the first two tested the circuit and the layout.</p>
+        <p data-lang="ru">Своя двухслойная плата, спроектирована в KiCad. Rev C — третья ревизия; первые две проверяли схему и разводку.</p>
+      </div>
+    </div>
+
+    <dl class="specs">
+      <div class="spec"><dt data-lang="en">Bulbs</dt><dt data-lang="ru">Лампы</dt>
+        <dd data-lang="en">4 car bulbs, 12&nbsp;V, 5&nbsp;W</dd><dd data-lang="ru">4 автомобильные лампы, 12&nbsp;В, 5&nbsp;Вт</dd></div>
+      <div class="spec"><dt data-lang="en">Power</dt><dt data-lang="ru">Питание</dt>
+        <dd data-lang="en">USB-C Power Delivery, 30&nbsp;W charger or more</dd><dd data-lang="ru">USB-C Power Delivery, блок питания от 30&nbsp;Вт</dd></div>
+      <div class="spec"><dt data-lang="en">Controller</dt><dt data-lang="ru">Контроллер</dt>
+        <dd>ESP32-C6</dd></div>
+      <div class="spec"><dt data-lang="en">Control</dt><dt data-lang="ru">Управление</dt>
+        <dd data-lang="en">Zigbee (Yandex Alice) or Wi-Fi and a web page, without a smart home</dd><dd data-lang="ru">Zigbee (Алиса) или Wi-Fi и веб-страница, без умного дома</dd></div>
+      <div class="spec"><dt data-lang="en">On device</dt><dt data-lang="ru">На устройстве</dt>
+        <dd data-lang="en">OLED 128×64, 4 buttons</dd><dd data-lang="ru">OLED 128×64, 4 кнопки</dd></div>
+      <div class="spec"><dt data-lang="en">Updates</dt><dt data-lang="ru">Обновление</dt>
+        <dd data-lang="en">Over Wi-Fi or Bluetooth</dd><dd data-lang="ru">По Wi-Fi или Bluetooth</dd></div>
+      <div class="spec"><dt data-lang="en">Board</dt><dt data-lang="ru">Плата</dt>
+        <dd data-lang="en">Custom, Rev C, 2 layers, 100×59&nbsp;mm</dd><dd data-lang="ru">Своя, Rev C, 2 слоя, 100×59&nbsp;мм</dd></div>
+    </dl>
+
+    <div class="renders">
+      <figure class="frame" style="margin:0">
+        <img src="/img/render-top-1080.webp" srcset="/img/render-top-1080.webp 1080w, /img/render-top-2000.webp 2000w"
+             sizes="(max-width:880px) 100vw, 532px" width="2000" height="1247" loading="lazy" decoding="async"
+             alt="KiCad render of the Rev C board, top side: ESP32-C6 module, buck converter, PD trigger, four MOSFETs, Faston outputs">
+      </figure>
+      <figure class="frame" style="margin:0">
+        <img src="/img/render-bottom-1080.webp" srcset="/img/render-bottom-1080.webp 1080w, /img/render-bottom-2000.webp 2000w"
+             sizes="(max-width:880px) 100vw, 532px" width="2000" height="1258" loading="lazy" decoding="async"
+             alt="KiCad render of the Rev C board, bottom side: the silkscreen shows the tail light exploded view from the parts catalogue">
+      </figure>
+    </div>
+    <p class="cap" data-lang="en">KiCad render, top and bottom. The bottom silkscreen is the tail light’s exploded view from the VAZ-2106 parts catalogue.</p>
+    <p class="cap" data-lang="ru">Рендер KiCad, верх и низ. На нижней шелкографии — схема фонаря из каталога запчастей ВАЗ-2106.</p>
+  </div>
+</section>
+
+<!-- ══════════════ LINKS ══════════════ -->
+<section id="links">
+  <div class="wrap">
+    <h2>
+      <span data-lang="en">source</span>
+      <span data-lang="ru">исходники</span>
+    </h2>
+    <ul class="src-links">
+      <li data-lang="en">Schematics, board and firmware are on <a href="https://github.com/saschapo/smartlada" target="_blank" rel="noopener">GitHub</a>.</li>
+      <li data-lang="ru">Схема, плата и прошивка — на <a href="https://github.com/saschapo/smartlada" target="_blank" rel="noopener">GitHub</a>.</li>
+      <li data-lang="en">Another project: <a href="https://cineink.saschapo.me/" target="_blank" rel="noopener">cineink</a>, an e-ink display for the film set.</li>
+      <li data-lang="ru">Другой проект: <a href="https://cineink.saschapo.me/" target="_blank" rel="noopener">cineink</a>, e-ink дисплей для съемочной площадки.</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+
+<!-- ══════════════ FOOTER / BIO ══════════════ -->
+<footer>
+  <div class="wrap">
+    <div class="foot-brand">SmartLada</div>
+    <div class="foot-made" data-lang="en">A personal project by</div>
+    <div class="foot-made" data-lang="ru">Личный проект</div>
+
+    <div class="bio">
+      <img src="/img/portrait.webp" width="280" height="350" loading="lazy" alt="Alexander Ponomarev">
+      <div class="bio-txt">
+        <div class="bio-name">
+          <span data-lang="en">Alexander Ponomarev</span>
+          <span data-lang="ru">Александр Пономарев</span>
+        </div>
+        <div class="bio-role">
+          <span data-lang="en">Director of Photography</span>
+          <span data-lang="ru">Оператор-постановщик</span>
+        </div>
+        <p data-lang="en">Alexander Ponomarev is a Moscow-based director of photography working worldwide since 2014, when he also co-founded LAM production studio with Yaroslav Dementiev; he works primarily in feature film and series, with a parallel body of work in commercials and music videos.</p>
+        <p data-lang="ru">Александр Пономарев — оператор-постановщик из Москвы, работает по миру с 2014 года, тогда же вместе с Ярославом Дементьевым основал продакшен LAM; снимает прежде всего в полнометражном кино и сериалах, параллельно — в рекламе и клипах.</p>
+        <p data-lang="en">He shot Sonya Raizman’s <em>Pictures of Friendly Ties</em>, winner of two main awards at Mayak Festival 2025; alongside cinematography, he also takes on projects as a director-DP and composer.</p>
+        <p data-lang="ru">Снял дебютный фильм Сони Райзман «Картины дружеских связей» — две главных награды фестиваля «Маяк» 2025; помимо операторской работы выступает на проектах как режиссер-оператор (dir/dp) и композитор.</p>
+        <div class="links">
+          <a href="https://instagram.com/saschapo" target="_blank" rel="noopener">Instagram</a>
+          <a href="https://saschapo.me" target="_blank" rel="noopener">Website</a>
+          <a href="https://t.me/saschapo" target="_blank" rel="noopener">Telegram</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var SUPPORTED = ['en', 'ru'];
+  var KEY = 'smartlada-lang';
+  var TITLE = {
+    en: 'SmartLada — a VAZ-2106 tail light as a smart lamp',
+    ru: 'SmartLada — задний фонарь ВАЗ-2106 как умный светильник'
+  };
+
+  function pick() {
+    try {
+      var saved = localStorage.getItem(KEY);
+      if (saved && SUPPORTED.indexOf(saved) !== -1) return saved;
+    } catch (e) {}
+    var langs = navigator.languages || [navigator.language || 'en'];
+    for (var i = 0; i < langs.length; i++) {
+      var code = (langs[i] || '').slice(0, 2).toLowerCase();
+      if (SUPPORTED.indexOf(code) !== -1) return code;
+    }
+    return 'en';
+  }
+
+  function apply(lang) {
+    document.documentElement.setAttribute('lang', lang);
+    document.title = TITLE[lang];
+    document.getElementById('btn-en').classList.toggle('on', lang === 'en');
+    document.getElementById('btn-ru').classList.toggle('on', lang === 'ru');
+  }
+
+  function set(lang) {
+    try { localStorage.setItem(KEY, lang); } catch (e) {}
+    apply(lang);
+  }
+
+  document.getElementById('btn-en').addEventListener('click', function () { set('en'); });
+  document.getElementById('btn-ru').addEventListener('click', function () { set('ru'); });
+  apply(pick());
+
+  // Heading face preview: ?h=sys shows headings in the system font instead of the pixel one.
+  if (/[?&]h=sys\b/.test(location.search)) document.documentElement.setAttribute('data-h', 'sys');
+})();
+</script>
+</body>
+</html>

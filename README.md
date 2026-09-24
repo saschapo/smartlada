@@ -5,6 +5,8 @@ lamps (turn / brake / marker / reverse) with a local OLED menu, animation effect
 **Zigbee control from a Yandex Station (Alice)**. Runs on a custom board that drops into
 the light housing and is powered over **USB-C PD**.
 
+Project page: **[smartlada.saschapo.me](https://smartlada.saschapo.me)** (source in [`site/`](site/)).
+
 The current, primary firmware is **[`SmartLadaRevC/`](SmartLadaRevC/)** — it targets the
 Rev C product board and is what the project ships. Everything else in the tree is either
 the hardware design or earlier development stages (see [Lineage](#lineage)).

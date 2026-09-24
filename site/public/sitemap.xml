@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://smartlada.saschapo.me/</loc>
+    <lastmod>2026-09-24</lastmod>
+    <image:image><image:loc>https://smartlada.saschapo.me/img/hero-2240.webp</image:loc></image:image>
+    <image:image><image:loc>https://smartlada.saschapo.me/img/idea-896.webp</image:loc></image:image>
+    <image:image><image:loc>https://smartlada.saschapo.me/img/light-1400.webp</image:loc></image:image>
+    <image:image><image:loc>https://smartlada.saschapo.me/img/tft-1400.webp</image:loc></image:image>
+    <image:image><image:loc>https://smartlada.saschapo.me/img/board-1800.webp</image:loc></image:image>
+    <image:image><image:loc>https://smartlada.saschapo.me/img/render-top-2000.webp</image:loc></image:image>
+    <image:image><image:loc>https://smartlada.saschapo.me/img/render-bottom-2000.webp</image:loc></image:image>
+  </url>
+</urlset>
