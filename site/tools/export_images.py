@@ -7,8 +7,11 @@
 
 Photos: EXIF orientation applied, then all metadata dropped (webp written without exif/xmp).
 Screens: re-rendered from site/screens/frames.json at x1 in the page palette; the page scales
-them with image-rendering: pixelated.
+them with image-rendering: pixelated. Animations are NOT animated images (iOS stops those when
+"Auto-Play Animated Images" is off): each is a vertical PNG strip of its frames plus delays in
+anims.json, played on a <canvas> by the page script.
 """
+import importlib.util
 import json
 import shutil
 import subprocess
@@ -83,8 +86,21 @@ def screens():
     dst.mkdir(exist_ok=True)
     for n in SCREENS:
         shutil.copy(tmp / "png/1x" / f"{n}.png", dst / f"{n}.png")
+
+    spec = importlib.util.spec_from_file_location("screens", ROOT / "tools/screens.py")
+    sc = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sc)
+    doc = json.loads((ROOT / "site/screens/frames.json").read_text())
+    fg, bg = sc.hexcolor(SCREEN_FG), sc.hexcolor(SCREEN_BG)
+    meta = {}
     for n in ANIMS:
-        shutil.copy(tmp / "anim" / f"{n}.webp", dst / f"{n}.webp")
+        frames, durs = sc.anim_frames([(ms, bytes.fromhex(d)) for ms, d in doc["anims"][n]])
+        strip = Image.new("RGB", (sc.W, sc.H * len(frames)), bg)
+        for i, data in enumerate(frames):
+            strip.paste(sc.to_image(data, fg, bg), (0, i * sc.H))
+        strip.convert("P", palette=Image.ADAPTIVE, colors=2).save(dst / f"{n}-strip.png", optimize=True)
+        meta[n] = durs
+    (dst / "anims.json").write_text(json.dumps(meta, separators=(",", ":")) + "\n")
 
 
 def icons():

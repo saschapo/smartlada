@@ -33,6 +33,10 @@
   **В orp Bold нет жирной кириллицы** (глифы = regular), поэтому в RU заголовки regular (400),
   в EN bold. Вариант с системным шрифтом: `?h=sys` в адресе (для сравнения, не для людей).
 - Экраны меню только целым масштабом (`--sa`/`--sg`, `image-rendering: pixelated`), палитра f2f2f2 на черном.
+- **Анимации меню — не анимированные картинки**, а `<canvas>` + PNG-лента кадров (`img/screens/<name>-strip.png`)
+  + задержки с платы (`anims.json`). Причина: iOS замораживает GIF/WebP/APNG при выключенном
+  «Автовоспроизведение анимированных изображений», а muted-autoplay видео не играет в энергосбережении.
+  Отбор кадров общий с `tools/screens.py` (`anim_frames`).
 - Фото из `custom_pcb/smartlada_revC/product photos v0/selected/` (в .gitignore, в git только экспорт).
   R0015166 не используется (R0015175 — тот же кадр крупнее).
 - SEO как на saschapo.me: canonical, OG/twitter (og.jpg 1200x630), JSON-LD (Person `saschapo.me/#person`

@@ -159,7 +159,8 @@
 
   /* ── device screens: 1-bit 128x64, only ever at an integer scale ── */
   .oled{margin:0;background:var(--panel);border:1px solid var(--line);padding:8px;width:max-content}
-  .oled img{image-rendering:pixelated;image-rendering:crisp-edges;width:calc(128px * var(--s));height:calc(64px * var(--s));max-width:none}
+  .oled img,.oled canvas{display:block;image-rendering:pixelated;image-rendering:crisp-edges;
+                         width:calc(128px * var(--s));height:calc(64px * var(--s));max-width:none}
   .anims{display:flex;flex-wrap:wrap;gap:16px;justify-content:space-between;margin-bottom:48px}
   .anims figure{margin:0}
   .anims .oled{--s:var(--sa)}
@@ -368,11 +369,11 @@
 
     <div class="anims">
       <figure>
-        <div class="oled"><img src="/img/screens/menu.webp" width="128" height="64" loading="lazy" alt="Main menu carousel: Mode, Brightness, Timings, Lamp Setup, Settings"></div>
+        <div class="oled"><canvas width="128" height="64" data-anim="menu" role="img" aria-label="Main menu carousel: Mode, Brightness, Timings, Lamp Setup, Settings"></canvas></div>
         <figcaption class="cap"><span data-lang="en">main menu</span><span data-lang="ru">главное меню</span></figcaption>
       </figure>
       <figure>
-        <div class="oled"><img src="/img/screens/mode.webp" width="128" height="64" loading="lazy" alt="Effect select: Static, Breathe, Turn, Chase, Fade, Drive"></div>
+        <div class="oled"><canvas width="128" height="64" data-anim="mode" role="img" aria-label="Effect select: Static, Breathe, Turn, Chase, Fade, Drive"></canvas></div>
         <figcaption class="cap"><span data-lang="en">effect select</span><span data-lang="ru">выбор эффекта</span></figcaption>
       </figure>
     </div>
@@ -559,6 +560,44 @@
 
   // Heading face preview: ?h=sys shows headings in the system font instead of the pixel one.
   if (/[?&]h=sys\b/.test(location.search)) document.documentElement.setAttribute('data-h', 'sys');
+})();
+
+/* Menu animations: frames from the firmware capture, drawn on a canvas with the board's own frame
+   delays. Not an animated image on purpose: iOS freezes GIF/WebP/APNG when "Auto-Play Animated
+   Images" is off, and muted autoplay video stops in Low Power Mode. Runs only while on screen. */
+(function () {
+  var canvases = document.querySelectorAll('canvas[data-anim]');
+  if (!canvases.length || !window.fetch) return;
+  var W = 128, H = 64;
+
+  function play(c, delays) {
+    var ctx = c.getContext('2d'), strip = new Image();
+    var i = 0, due = 0, raf = 0, visible = false;
+    function draw() { ctx.drawImage(strip, 0, i * H, W, H, 0, 0, W, H); }
+    function tick(t) {
+      if (!due) due = t + delays[i];
+      if (t - due > 1000) due = t;                 // back from a long stall: no fast-forward
+      var moved = false;
+      while (t >= due) { i = (i + 1) % delays.length; due += delays[i]; moved = true; }
+      if (moved) draw();
+      raf = visible ? requestAnimationFrame(tick) : 0;
+    }
+    strip.onload = function () {
+      draw();
+      new IntersectionObserver(function (entries) {
+        visible = entries[0].isIntersecting;
+        if (visible && !raf) { due = 0; raf = requestAnimationFrame(tick); }
+      }).observe(c);
+    };
+    strip.src = '/img/screens/' + c.getAttribute('data-anim') + '-strip.png';
+  }
+
+  fetch('/img/screens/anims.json').then(function (r) { return r.json(); }).then(function (delays) {
+    Array.prototype.forEach.call(canvases, function (c) {
+      var d = delays[c.getAttribute('data-anim')];
+      if (d) play(c, d);
+    });
+  });
 })();
 </script>
 </body>

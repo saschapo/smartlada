@@ -302,6 +302,21 @@ def to_image(data, fg, bg, scale=1):
     return img.resize((W * scale, H * scale), Image.NEAREST) if scale > 1 else img
 
 
+def anim_frames(frames):
+    """[(ms, data), ...] as captured -> (frame data list, per-frame delays in ms).
+    Browsers stretch very short frame delays, and the carousel redraws every ~12 ms: keep a frame
+    only once >= 20 ms have passed since the last kept one, so real speed survives. The last frame
+    holds 1.2 s before the loop restarts."""
+    kept = [frames[0]]
+    for f in frames[1:-1]:
+        if f[0] - kept[-1][0] >= 20:
+            kept.append(f)
+    if len(frames) > 1:
+        kept.append(frames[-1])
+    durs = [max(20, kept[i + 1][0] - kept[i][0]) for i in range(len(kept) - 1)] + [1200]
+    return [d for _, d in kept], durs
+
+
 def render(out, scale, fg, bg):
     from PIL import Image, ImageDraw
     doc = json.loads((out / "frames.json").read_text())
@@ -313,16 +328,8 @@ def render(out, scale, fg, bg):
         to_image(data, fg, bg, scale).save(out / "png" / f"{name}.png")
         to_image(data, fg, bg).save(out / "png" / "1x" / f"{name}.png")
     for name, frames in anims.items():
-        # Browsers stretch very short frame delays, and the carousel redraws every ~12 ms: keep a
-        # frame only once >= 20 ms have passed since the last kept one, so real speed survives.
-        kept = [frames[0]]
-        for f in frames[1:-1]:
-            if f[0] - kept[-1][0] >= 20:
-                kept.append(f)
-        if len(frames) > 1:
-            kept.append(frames[-1])
-        imgs = [to_image(d, fg, bg, scale) for _, d in kept]
-        durs = [max(20, kept[i + 1][0] - kept[i][0]) for i in range(len(kept) - 1)] + [1200]
+        kept, durs = anim_frames(frames)
+        imgs = [to_image(d, fg, bg, scale) for d in kept]
         imgs[0].save(out / "anim" / f"{name}.webp", save_all=True, append_images=imgs[1:],
                      duration=durs, loop=0, lossless=True)
     # contact sheet at x2 with names
