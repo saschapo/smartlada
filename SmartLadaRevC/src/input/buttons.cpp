@@ -1,5 +1,27 @@
 #include "buttons.h"
-#include "../display/display.h"   // UI_TFT
+#include "../display/display.h"   // UI_TFT, SCREEN_DUMP
+
+#if SCREEN_DUMP
+namespace buttons {
+// Capture build (tools/screens.py): single-char commands on USB serial press a key for one poll.
+// U/D/S/B = UP/DOWN/SEL/BACK, '+' = hello (prints the UI variant and re-sends the frame),
+// '-' = stop dumping. Keys are raw: under UI_TFT the menu swaps list navigation, and the script
+// maps its steps from the variant in the hello line.
+static int8_t serialKey() {
+  while (Serial.available()) {
+    switch (Serial.read()) {
+      case 'U': return UP;
+      case 'D': return DOWN;
+      case 'S': return SEL;
+      case 'B': return BACK;
+      case '+': Serial.printf("\nSCRDUMP ui=%s\n", UI_TFT ? "tft" : "oled"); display::setDump(true); break;
+      case '-': display::setDump(false); break;
+    }
+  }
+  return -1;
+}
+}  // namespace buttons
+#endif
 
 #if UI_TFT
 #include <ESP32Encoder.h>
@@ -54,6 +76,10 @@ void poll(uint32_t now) {
     else if (!longFired) ev[SEL] = true;
   }
   if (stable == LOW && !longFired && now - pressT >= LONG_MS) { longFired = true; ev[BACK] = true; }
+#if SCREEN_DUMP
+  int8_t k = serialKey();
+  if (k >= 0) ev[k] = true;
+#endif
 }
 
 bool pressed(uint8_t i) { return ev[i]; }
@@ -117,6 +143,10 @@ void poll(uint32_t now) {
       if (now - b[i].lastRepeat >= interval) { b[i].rep = true; b[i].lastRepeat = now; }
     }
   }
+#if SCREEN_DUMP
+  int8_t k = serialKey();
+  if (k >= 0) b[k].edge = b[k].rep = true;
+#endif
 }
 
 bool     pressed(uint8_t i) { return b[i].edge; }

@@ -20,6 +20,14 @@ Full details: **[`SmartLadaRevC/README.md`](SmartLadaRevC/README.md)**.
 
 ### Hardware (Rev C board)
 
+<p align="center">
+  <img src="custom_pcb/smartlada_revC/img/smartlada_revC_top.webp" width="49%" alt="SmartLada Rev C, top side">
+  <img src="custom_pcb/smartlada_revC/img/smartlada_revC_bottom.webp" width="49%" alt="SmartLada Rev C, bottom side">
+</p>
+<p align="center"><sub>Rev C, KiCad render. Top: ESP32-C6 module, buck, PD trigger, four lamp MOSFETs with
+Faston outputs. Bottom: the silkscreen carries the VAZ-2106 tail-light exploded view from the parts
+catalogue ("ФОНАРИ ЗАДНИЕ").</sub></p>
+
 - **MCU:** ESP32-C6-WROOM-1-N16 (integrated on the board).
 - **Power in:** USB-C PD, **12 V / 3 A trigger** (CH224K). 12 V feeds the lamps directly;
   a **TPS54202 buck** makes 3.3 V for the MCU/OLED. No 12 V → holds 5 V (logic alive, lamps dark).

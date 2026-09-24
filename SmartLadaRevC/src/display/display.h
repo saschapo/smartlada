@@ -11,6 +11,14 @@
 #define UI_TFT 0
 #endif
 
+// SCREEN_DUMP=1: capture build for tools/screens.py. Every changed frame goes out on USB serial
+// as "SCR <millis> <2048 hex>" (the raw 128x64 page buffer), and single-char serial commands press keys
+// (see buttons.cpp). Dumping is on from boot so the splash is caught; a board left on this build
+// with the port open but unread can stall on serial writes, so flash a normal build afterwards.
+#ifndef SCREEN_DUMP
+#define SCREEN_DUMP 0
+#endif
+
 namespace display {
 
 #if UI_TFT
@@ -24,6 +32,13 @@ class TftOled : public Adafruit_SSD1306 {
   void ssd1306_command(uint8_t c);   // emulates contrast / inverse / panel on-off
 };
 extern TftOled oled;
+#elif SCREEN_DUMP
+class DumpOled : public Adafruit_SSD1306 {   // display() hidden by name, as in TftOled
+ public:
+  using Adafruit_SSD1306::Adafruit_SSD1306;
+  void display();                    // push to the panel, then dump the frame if it changed
+};
+extern DumpOled oled;
 #else
 extern Adafruit_SSD1306 oled;
 #endif
@@ -34,5 +49,10 @@ void setBrightness(uint8_t c);         // 0x81 contrast, 0..255
 void setInverse(bool inv);             // 0xA6 / 0xA7 (instant, no re-flush)
 void power(bool on);                   // 0xAF / 0xAE (RAM retained when off)
 void invertRect(int16_t x, int16_t y, int16_t w, int16_t h);  // XOR-flip buffer region
+
+#if SCREEN_DUMP
+void setDump(bool on);                 // on also re-sends the current frame
+void dumpFrame(const uint8_t* buf);    // "SCR <ms> <hex>" line if dumping and the frame changed
+#endif
 
 }  // namespace display

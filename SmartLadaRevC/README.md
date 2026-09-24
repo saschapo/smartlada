@@ -198,8 +198,8 @@ BLK, K0: not connected
 - The panel needs real CS and RES, and J4 has only six signals, so both come from the J8 debug
   UART. **This build has no UART0 console**, including the Zigbee-stack logs that normally go there.
 - The menu code is untouched: it still draws into the 128x64 SSD1306 buffer, which `display()`
-  fits to the panel (portrait, 240x120, x1.875 nearest-neighbour: crisp, but some source pixels
-  come out 2 px wide and some 1 px) and streams only the rectangle that changed since the last
+  shows pixel-exact at the largest integer scale that fits (portrait, 240 wide: x1, centred;
+  a landscape rotation would give x2) and streams only the rectangle that changed since the last
   frame, at 40 MHz. The module has no TE line, so full-screen motion (the menu carousel) can
   still tear.
 - Encoder: CW = UP, so values rise; `menu::update` swaps its list navigation under `UI_TFT` so
@@ -214,6 +214,30 @@ BLK, K0: not connected
 - CS->GND + RES->3V3 (to stay on J4 alone) left the panel white, but that test ran on a board
   with a badly soldered U1, so it proves nothing either way. It would be fragile regardless:
   with CS tied low one spurious SCLK edge misaligns the stream until a power cycle.
+
+## Screen capture (`SCREEN_DUMP`)
+
+Menu screenshots come straight from the firmware's frame buffer, so they cannot drift from the
+code. A capture build (either display variant) prints every changed frame on USB serial as
+`SCR <millis> <2048 hex>` (the raw 128x64 page buffer) and takes keys as single chars
+(`U`/`D`/`S`/`B`, `+` = hello with the UI variant). [`tools/screens.py`](../tools/screens.py)
+walks the menu and renders the result:
+
+```sh
+arduino-cli compile -b "$FQBN" --build-property "compiler.cpp.extra_flags=-DUI_TFT=1 -DSCREEN_DUMP=1" SmartLadaRevC
+uv run tools/screens.py capture --force-out     # -> site/screens/ (frames.json, png/, anim/, contact.png)
+uv run tools/screens.py render --scale 6 --fg f2f2f2   # re-render the saved frames, no board
+```
+
+- Opening the port resets the board, so every capture starts from a fresh boot (splash, idle,
+  all cursors at 0). The walk only enters and leaves screens: no `ok` inside Zigbee / WiFi,
+  confirm screens are left while they say No, and it stops if a key gets no reaction.
+- `--force-out` enables Force Out after boot (it is RAM-only), so idle shows the main screen on
+  USB power instead of "NO 12V". It drives the lamp FETs from USB 5 V: **disconnect the lamps.**
+- Dumping is on from boot so the splash is caught. With the port open but unread the serial
+  writes can stall the loop, so flash a normal build afterwards.
+- `uv run tools/screens.py shell` drives the menu by hand and saves screens by name (e.g. an
+  effect's Timings page, which the default walk only sees in Static mode).
 
 ## Status & roadmap
 
